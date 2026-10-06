@@ -1,0 +1,11 @@
+requests
+lxml
+torch
+transformers
+chromadb
+sentencepiece
+numpy
+pandas
+tqdm
+sentence-transformers
+json-repair
