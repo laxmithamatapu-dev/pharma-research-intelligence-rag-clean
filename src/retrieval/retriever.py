@@ -68,11 +68,23 @@ def retrieve_chunks(
 
     if query_info is not None:
         expanded_queries = query_info.get("expanded_queries", []) or []
-        retrieval_hints = query_info.get("retrieval_hints", []) or []
+
         if queries is None:
-            queries = [question] if question else []
-            queries.extend(expanded_queries)
-            queries.extend(retrieval_hints)
+
+            candidate_queries = []
+
+            if question:
+                candidate_queries.append(question)
+
+            candidate_queries.extend(expanded_queries)
+
+            queries = list(
+                dict.fromkeys(
+                    q.strip()
+                    for q in candidate_queries
+                    if isinstance(q, str) and q.strip()
+                )
+            )
 
     if question is not None and original_question is None:
         original_question = question

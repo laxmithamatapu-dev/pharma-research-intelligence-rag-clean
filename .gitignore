@@ -1,12 +1,18 @@
 .venv/
+venv/
+
 __pycache__/
 *.pyc
 
-data/chromadb/
-data/staging/
-data/backups/
+.vscode/
+
+.env
+
+data/
+chroma/
+embeddings/
+models/
 
 debug_runs/
-evaluation_outputs/
 
-.vscode/
+*.log
