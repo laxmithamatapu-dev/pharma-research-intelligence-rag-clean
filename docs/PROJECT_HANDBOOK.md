@@ -384,3 +384,8 @@ Each item is a fact with evidence; no fixes proposed yet.
 57. One passage covers all facts for 14/16 L1 questions, but in reranker order the needed depth is 1–11 (median 3): the per-paper limit is a proxy for within-paper ranking uncertainty.
 58. Optimal allocation is opposite by scope: L1 best = depth (1–2 papers × 3–4 passages: 30–36 facts); L2 best = breadth (6–8 papers × 1 passage: aspect coverage 0.56–0.61 vs 0.41 today).
 59. Pool concentration overlaps between L1 and L2 (top-paper margin ≥1.6 in 11/16 L1 vs 1/9 L2); top pool paper is gold for only 12/16 L1 → scope from question analysis; keep ≥2 papers for single-paper questions.
+
+## Current state (2026-10-15) — see [PIPELINE_REPORT.md](PIPELINE_REPORT.md), [OPERATIONS.md](OPERATIONS.md), [IMPLEMENTATION_LOG.md](IMPLEMENTATION_LOG.md)
+- Paper-first retrieval is the default (`RETRIEVAL_MODE=legacy` = rollback). Paper index `pharma_papers` (title + abstract, MedCPT CLS/IP) must be rebuilt after any passage rebuild.
+- Final baseline (49 questions): L1 facts visible 88 % dev / 81 % held-out; stated 71 % / 81 %; L2 coverage 0.66 / 0.53 (lower bound); 0/12 controls with claims; 0 validation failures over 103 replayed answers; generated answers median 119 s, p90 153 s; abstentions 3.8 s.
+- Service: `serve.py` (/health, /ask), systemd unit in `deploy/`; pinned deps in `requirements.lock`.
