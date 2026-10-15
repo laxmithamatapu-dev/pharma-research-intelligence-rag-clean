@@ -87,6 +87,15 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(payload["question"], "Which biomarker?")
         self.assertEqual(payload["answer"], "ok [E1]")
 
+    def test_ui_page_is_served(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_address[1], timeout=10)
+        connection.request("GET", "/")
+        response = connection.getresponse()
+        body = response.read().decode("utf-8")
+        self.assertEqual(response.status, 200)
+        self.assertIn("text/html", response.getheader("Content-Type"))
+        self.assertIn('id="question"', body)
+
     def test_bad_requests_are_rejected(self):
         self.assertEqual(self.request("POST", "/ask", "not json")[0], 400)
         self.assertEqual(self.request("POST", "/ask", json.dumps({"question": ""}))[0], 400)

@@ -134,6 +134,12 @@ class QwenGenerator:
             host = f"http://{host}"
         return f"{host.rstrip('/')}/api/chat"
 
+    @staticmethod
+    def _parse_keep_alive(value: str | int) -> str | int:
+        # The Ollama API rejects unit-less strings such as "-1"; plain numbers must be sent as integers (seconds).
+        text = str(value).strip()
+        return int(text) if re.fullmatch(r"-?\d+", text) else text
+
     def __init__(
         self,
         model_name: str = "qwen2.5:7b",
@@ -144,7 +150,7 @@ class QwenGenerator:
         self.model_name = model_name
         self.timeout = timeout
         self.options = dict(self.DEFAULT_OPTIONS if options is None else options)
-        self.keep_alive = keep_alive or os.environ.get("OLLAMA_KEEP_ALIVE", "30m")
+        self.keep_alive = self._parse_keep_alive(keep_alive or os.environ.get("OLLAMA_KEEP_ALIVE", "30m"))
         self.last_stats: dict[str, Any] = {}
 
         print(
