@@ -378,3 +378,9 @@ Each item is a fact with evidence; no fixes proposed yet.
 53. MedCPT cross-encoder: L1 facts 23–25 (worse), L2 +3 papers, 3.0× rerank cost (0.193 vs 0.064 s/candidate). Not an improvement for L1.
 54. Discussion > Results preference is shared by both cross-encoders and is not a penalty on numbers (rank corr ≈ 0); window max-scoring fixes within-paper order but hurts cross-paper ranking.
 55. Scoring all chunks of the gold paper puts the answer chunk in the top 3 for 10/16 (MiniLM) / 11/16 (window) papers — supports paper-first passage selection.
+
+## Discovery Log — pass 11 (2026-10-15, paper vs passage budget; see [RETRIEVAL_DESIGN_PAPER_BUDGET.md](RETRIEVAL_DESIGN_PAPER_BUDGET.md))
+56. All 52 L1 facts are visible somewhere in the gold papers; passage-level pools contain 33 → passage-level retrieval caps evidence at 63 %.
+57. One passage covers all facts for 14/16 L1 questions, but in reranker order the needed depth is 1–11 (median 3): the per-paper limit is a proxy for within-paper ranking uncertainty.
+58. Optimal allocation is opposite by scope: L1 best = depth (1–2 papers × 3–4 passages: 30–36 facts); L2 best = breadth (6–8 papers × 1 passage: aspect coverage 0.56–0.61 vs 0.41 today).
+59. Pool concentration overlaps between L1 and L2 (top-paper margin ≥1.6 in 11/16 L1 vs 1/9 L2); top pool paper is gold for only 12/16 L1 → scope from question analysis; keep ≥2 papers for single-paper questions.
