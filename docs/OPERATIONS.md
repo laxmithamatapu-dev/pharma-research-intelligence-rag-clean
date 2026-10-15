@@ -47,6 +47,7 @@ Questions are answered one at a time (single CPU-bound generation); `/health` st
 | `RETRIEVAL_MODE` | `paper_first` | `legacy` restores the previous flat passage retrieval (rollback) |
 | `OLLAMA_KEEP_ALIVE` | `30m` | How long Ollama keeps the model loaded; `-1` = always (recommended for the service) |
 | `OLLAMA_HOST` | `127.0.0.1:11434` | Ollama endpoint |
+| `OLLAMA_NUM_THREAD` | CPU count (8) | Threads for Qwen; 8 is ≈ 18–25 % faster than Ollama's default of 4 on this VM |
 | `RAG_HOST` / `RAG_PORT` | `127.0.0.1` / `8000` | Service bind address |
 | `HF_HUB_OFFLINE` | unset | Set to `1` in production |
 

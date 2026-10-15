@@ -59,13 +59,21 @@ Rollback: RETRIEVAL_MODE=legacy
 | Writing the answer (decode): median | 59 s (≈ 6.3 tokens/s) |
 | Model load (warm service) | ≤ 7.6 s; first request after a VM reboot up to ≈ 119 s unless pre-warmed |
 
+**Thread count (measured after the baseline, same 3,850-token prompt, 2–3 runs each):** Ollama defaults to 4 threads (one per physical core). Using all 8 vCPU threads raises prompt reading from 54.9 to **68.5 tokens/s (+25 %)** and writing from 5.81 to **6.88 tokens/s (+18 %)**; 6 threads was not better than 4. Now the default (`OLLAMA_NUM_THREAD`, falls back to the CPU count). Expected effect on a typical answer (≈ 3,300 prompt + 360 answer tokens): ≈ 122 s → ≈ 100 s, with no change to the model, prompt, or evidence.
+
+**Is this speed normal for a local LLM?** Yes, for a 7B model on CPU with this prompt size:
+- *Writing* speed is set by memory bandwidth: every generated token reads all 4.25 GB of weights. At 6.9 tokens/s the VM is moving ≈ 29 GB/s, which is the practical bandwidth of 4 cores; no software setting changes that much. A GPU with ~1 TB/s bandwidth writes the same model at roughly 100 tokens/s or more.
+- *Reading* the prompt is compute-bound: ≈ 55–70 tokens/s on 4 cores versus thousands of tokens/s on a GPU. RAG prompts are long (≈ 3,300 tokens of evidence and instructions), so reading alone takes ≈ 50 s.
+- Smaller model on the same VM: `qwen2.5:1.5b` reads at 204 and writes at 21.6 tokens/s (≈ 3.7× faster) but its answer quality has not been evaluated here.
+- So 1.5–2 minutes per evidence-grounded answer is expected for CPU-only 7B inference; sub-10-second answers require a GPU or a much smaller model.
+
 **Why generation dominates:** each evidence passage adds ≈ 350 prompt tokens (≈ 5.5 s), and each 100 answer tokens cost ≈ 16 s. Writing is limited by memory bandwidth: every generated token reads the full 4.25 GB of quantized weights (≈ 27 GB/s at 6.3 tokens/s). The p90 slightly exceeds 150 s because of long answers (up to 561 tokens ≈ 89 s of writing).
 
 ## 4. Resources
 
 | Resource | Usage |
 |---|---|
-| **vCPU** | Qwen: 4 threads (llama.cpp, AMX); embeddings and cross-encoder: 4 PyTorch threads; stages run sequentially, one request at a time |
+| **vCPU** | Qwen: all 8 threads (llama.cpp, AMX; was 4 during the baseline); embeddings and cross-encoder: 4 PyTorch threads; stages run sequentially, one request at a time |
 | **RAM** | Qwen 7B runner with 8 K context ≈ 5.5 GB; Qwen 1.5B (fallback, when loaded) ≈ 1.4 GB; app (MedCPT query encoder, cross-encoder, Chroma) ≈ 1.2–1.6 GB; observed system use with both models resident ≈ 9.4 GB of 16 GB |
 | **Disk** | Vector DB 238 MB (passages + papers); source articles 72 MB; HF models in use 964 MB; Ollama models 5.4 GB; Python environment 5.9 GB; disk 28.7 GB, 77 % used, 6.8 GB free |
 | **Per paper** | ≈ 0.53 MB (passages ≈ 0.39 MB, source XML ≈ 0.12 MB, paper record ≈ 0.02 MB) |
