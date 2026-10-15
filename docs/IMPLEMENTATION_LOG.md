@@ -70,3 +70,51 @@ Blueprint: [PAPER_FIRST_BLUEPRINT.md](PAPER_FIRST_BLUEPRINT.md). Branch: `fix/co
 - Remaining L1 losses (8 facts): L1-06, L1-09, L1-14 (1/3 each), L1-10 (3/4), L1-15 (1/2) — answer passages beyond within-paper rank 4.
 
 **Next (Session 3)**: paper-grouped context with paper headers; generation via Ollama API (`num_ctx 8192`, temperature 0, seed); targeted generation with 3 repeats vs legacy.
+
+## Session 3 — Context + generation (2026-10-15) — gate PARTIALLY passed
+
+**Changes**
+| File | Change |
+|---|---|
+| `src/generation/generator.py` | Generation via Ollama `/api/chat` (`num_ctx 8192`, `temperature 0`, `seed 0`, 600 s timeout); per-call stats in `last_stats`; applies to both retrieval modes |
+| `src/generation/context_builder.py` | Paper-first blocks carry `Paper:` title and `Study Design | Publication Year` from the paper record instead of the keyword "Evidence Type"; legacy block format unchanged |
+| `src/evaluation/harness.py` | Records `/api/chat` calls (prompt, output, token stats, rates, done reason) |
+| Tests | Generator API payload/timeout/HTTP error; context format (legacy unchanged, paper-first parsable). Suite passes |
+
+Runtime check: Ollama loads `qwen2.5:7b` with context 8,192 (runner 5.5 GB vs 5.1 GB at 4,096).
+
+**Comparison** (10 questions: L1-02, L1-04, L1-05, L1-08, L1-12, L1-13, L1-16, L2-01, L2-03, L1-C1; 2 repeats + warm-up per mode; runs `20261015_091600_full_s3_legacy`, `20261015_093613_full_s3_paper_first`; repeat 1 used for quality and latency)
+
+| Metric | Legacy | Paper-first |
+|---|---|---|
+| L1 expected facts visible to Qwen (8 questions, 24 facts) | 15 | **24** |
+| Expected facts stated in the answer | 6 | **13** |
+| … of which cited to the gold paper | 6 | 9 (L1-13 states 4 facts without citations) |
+| Validation outcome | 9 pass_first, 1 fail | 8 pass_first, 1 pass_after_prune, 1 fail |
+| Control (L1-C1) | abstained, 0 claims | abstained, 0 claims |
+| L2 aspect coverage (L2-01 / L2-03) | 0.4 / 0.2 | 0.6 / 0.6 |
+| Prompt tokens (median) | 2,113 | 3,450 |
+| Answer tokens (median) | 314 | 313 |
+| Generation time median / p90 | 66 / 112 s | 111 / 133 s |
+| **End-to-end median / p90 / max** | 69 / 122 / 122 s | **116 / 138 / 139 s** |
+| Identical output across repeats | 4/10 | **3/10** |
+
+**Gate**
+| Criterion | Result |
+|---|---|
+| Fact recall ≥ legacy | **Pass** (13 vs 6 facts in answers) |
+| Validation failures not higher | **Pass with caveat** (1 = 1 fail; paper-first adds 1 destructive prune, L1-12) |
+| Controls abstain | **Pass** |
+| p90 latency ≤ 180 s | **Pass** (138 s) |
+| Identical outputs across repeats | **Fail** |
+
+**Findings**
+1. **Non-determinism tracks the prompt cache.** In all 13 differing pairs, repeat 1 processed the full prompt (50–70 s prefill) and repeat 2 reused the cached prompt (0.2 s). Identical pairs had matching cache states (e.g. L1-02, cached in both repeats via the warm-up). Temperature 0 and seed 0 are necessary but not sufficient. Production impact is small (distinct questions rarely hit the cache); benchmark impact is large.
+2. **Uncited sentences pass validation** (L1-13: all 4 facts stated without citations).
+3. **Study-design labels are wrong in some paper headers.** `infer_study_design` matches cues by substring, so "phase i" fires inside "phase ii/iii" (L1-13 shown as "randomized phase I"). The paper header now exposes this label to Qwen.
+4. **Pruning can delete a correct answer.** L1-12: a legitimate "less likely to undergo rebiopsy" triggers the forbidden-phrase rule; pruning keeps only cited lines; the raw answer's facts were in uncited bullets, so the final answer is headings and citations only.
+5. Fabricated attribution (L1-16) persists in both modes.
+
+**Next**
+- **Session 3b (generation hygiene, small)**: make benchmark repeats cache-independent (cold repeats) or disable prompt caching for evaluation; fix the study-design substring match or drop the design from the header; decide the policy for uncited factual sentences; stop pruning from deleting uncited answer content wholesale.
+- Then Session 4 (index content) and Session 5 (abstention + cut-over) as planned.
