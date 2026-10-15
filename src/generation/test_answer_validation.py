@@ -173,7 +173,10 @@ class OllamaInvocationTests(unittest.TestCase):
         self.assertTrue(post.call_args.args[0].endswith("/api/chat"))
         payload = post.call_args.kwargs["json"]
         self.assertEqual(payload["model"], generator.model_name)
-        self.assertEqual(payload["options"], {"num_ctx": 8192, "temperature": 0, "seed": 0})
+        self.assertEqual(payload["options"]["num_ctx"], 8192)
+        self.assertEqual(payload["options"]["temperature"], 0)
+        self.assertEqual(payload["options"]["seed"], 0)
+        self.assertEqual(payload["options"]["num_thread"], generator.options["num_thread"])
         self.assertFalse(payload["stream"])
         self.assertEqual(payload["messages"][0]["role"], "user")
         self.assertIn("Which biomarker?", payload["messages"][0]["content"])

@@ -80,7 +80,9 @@ class LlmFallbackTests(unittest.TestCase):
         self.assertTrue(post.call_args.args[0].endswith("/api/generate"))
         payload = post.call_args.kwargs["json"]
         self.assertEqual(payload["model"], classifier.model_name)
-        self.assertEqual(payload["options"], {"temperature": 0, "seed": 0})
+        self.assertEqual(payload["options"]["temperature"], 0)
+        self.assertEqual(payload["options"]["seed"], 0)
+        self.assertIn("num_thread", payload["options"])
         self.assertFalse(payload["stream"])
         self.assertEqual(post.call_args.kwargs["timeout"], classifier.llm_timeout)
         self.assertEqual(result["question_type"], "SAFETY")

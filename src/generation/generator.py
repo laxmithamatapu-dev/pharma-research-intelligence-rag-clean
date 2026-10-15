@@ -100,7 +100,12 @@ class QwenGenerator:
         ),
     }
 
-    DEFAULT_OPTIONS = {"num_ctx": 8192, "temperature": 0, "seed": 0}
+    DEFAULT_OPTIONS = {
+        "num_ctx": 8192,
+        "temperature": 0,
+        "seed": 0,
+        "num_thread": int(os.environ.get("OLLAMA_NUM_THREAD", os.cpu_count() or 4)),
+    }
 
     def warm_up(self) -> dict[str, Any]:
         """Load the model with the generation context size so the first answer does not pay the load."""
@@ -111,7 +116,11 @@ class QwenGenerator:
             json={
                 "model": self.model_name,
                 "keep_alive": self.keep_alive,
-                "options": {"num_ctx": self.options.get("num_ctx")},
+                "options": {
+                    key: self.options[key]
+                    for key in ("num_ctx", "num_thread")
+                    if key in self.options
+                },
             },
             timeout=self.timeout,
         )

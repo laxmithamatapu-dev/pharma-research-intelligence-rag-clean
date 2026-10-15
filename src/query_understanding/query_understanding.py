@@ -191,7 +191,11 @@ class QueryUnderstanding:
 
     # Below this confidence the question is sent to the LLM fallback.
     LLM_FALLBACK_CONFIDENCE = 0.5
-    LLM_OPTIONS = {"temperature": 0, "seed": 0}
+    LLM_OPTIONS = {
+        "temperature": 0,
+        "seed": 0,
+        "num_thread": int(os.environ.get("OLLAMA_NUM_THREAD", os.cpu_count() or 4)),
+    }
     # Raw weighted score at which a taxonomy score reaches ~0.63.
     TAXONOMY_SATURATION = 3.0
     # A type scoring below this is treated as "not detected".
