@@ -1,8 +1,10 @@
 import json
+import os
 import re
-import subprocess
 import time
 from typing import Any
+
+import requests
 
 
 NON_EVIDENCE_CITATION_PATTERN = re.compile(
@@ -81,13 +83,25 @@ class QwenGenerator:
         ),
     }
 
+    DEFAULT_OPTIONS = {"num_ctx": 8192, "temperature": 0, "seed": 0}
+
+    @staticmethod
+    def _ollama_chat_url() -> str:
+        host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434").strip()
+        if not host.startswith(("http://", "https://")):
+            host = f"http://{host}"
+        return f"{host.rstrip('/')}/api/chat"
+
     def __init__(
         self,
         model_name: str = "qwen2.5:7b",
         timeout: float = 600.0,
+        options: dict[str, Any] | None = None,
     ):
         self.model_name = model_name
         self.timeout = timeout
+        self.options = dict(self.DEFAULT_OPTIONS if options is None else options)
+        self.last_stats: dict[str, Any] = {}
 
         print(
             f"\nUsing Ollama model: "
@@ -460,35 +474,49 @@ ANSWER:
         start = time.time()
 
         try:
-            result = subprocess.run(
-                [
-                    "ollama",
-                    "run",
-                    "--nowordwrap",
-                    self.model_name
-                ],
-                input=prompt,
-                text=True,
-                capture_output=True,
+            response = requests.post(
+                self._ollama_chat_url(),
+                json={
+                    "model": self.model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                    "options": dict(self.options),
+                },
                 timeout=self.timeout,
             )
-        except subprocess.TimeoutExpired as error:
+        except requests.Timeout as error:
             raise RuntimeError(
                 f"Ollama generation timed out after {self.timeout:.0f} seconds"
             ) from error
+        except requests.RequestException as error:
+            raise RuntimeError(f"Ollama Error:\n{error}") from error
 
         print(
             f"\nOllama Call Time: "
             f"{time.time() - start:.2f} seconds"
         )
 
-        if result.returncode != 0:
+        if response.status_code != 200:
             raise RuntimeError(
                 f"Ollama Error:\n"
-                f"{result.stderr}"
+                f"{response.status_code} {response.text[:500]}"
             )
 
-        answer = self.normalize_answer(result.stdout)
+        body = response.json()
+        self.last_stats = {
+            key: body.get(key)
+            for key in (
+                "prompt_eval_count",
+                "prompt_eval_duration",
+                "eval_count",
+                "eval_duration",
+                "load_duration",
+                "total_duration",
+                "done_reason",
+            )
+        }
+
+        answer = self.normalize_answer((body.get("message") or {}).get("content", ""))
         print(
             f"\nAnswer Characters: "
             f"{len(answer)}"

@@ -467,16 +467,18 @@ class BenchmarkHarness:
             return result
 
         def requests_post(url, *post_args, **post_kwargs):
-            if "/api/generate" not in str(url):
+            if "/api/generate" not in str(url) and "/api/chat" not in str(url):
                 return originals["requests_post"](url, *post_args, **post_kwargs)
             payload = post_kwargs.get("json") or {}
+            messages = payload.get("messages") or []
+            prompt = payload.get("prompt") or (messages[-1].get("content") if messages else "") or ""
             call = {
                 "stage": harness.stage,
                 "model": payload.get("model"),
                 "command": ["POST", str(url)],
                 "options": payload.get("options"),
-                "prompt": payload.get("prompt") or "",
-                "prompt_chars": len(payload.get("prompt") or ""),
+                "prompt": prompt,
+                "prompt_chars": len(prompt),
             }
             if harness.current is not None:
                 harness.current["ollama_calls"].append(call)
@@ -493,7 +495,8 @@ class BenchmarkHarness:
                 body = response.json()
             except ValueError:
                 body = {}
-            call["stdout"] = body.get("response")
+            call["stdout"] = body.get("response") if "response" in body else (body.get("message") or {}).get("content")
+            call["done_reason"] = body.get("done_reason")
             call["stats"] = {
                 "total_duration_seconds": (body.get("total_duration") or 0) / 1e9,
                 "load_duration_seconds": (body.get("load_duration") or 0) / 1e9,
@@ -502,6 +505,11 @@ class BenchmarkHarness:
                 "eval_count": body.get("eval_count"),
                 "eval_duration_seconds": (body.get("eval_duration") or 0) / 1e9,
             }
+            stats = call["stats"]
+            if stats["prompt_eval_count"] and stats["prompt_eval_duration_seconds"]:
+                stats["prompt_eval_rate_tokens_per_second"] = stats["prompt_eval_count"] / stats["prompt_eval_duration_seconds"]
+            if stats["eval_count"] and stats["eval_duration_seconds"]:
+                stats["eval_rate_tokens_per_second"] = stats["eval_count"] / stats["eval_duration_seconds"]
             call["ollama_rss_kb"] = sample_ollama_rss_kb()
             return response
 

@@ -120,7 +120,30 @@ relevant findings identified above.
             ""
         )
 
-        block = f"""
+        paper_metadata = chunk.get("paper_metadata")
+
+        if paper_metadata:
+
+            evidence_map[evidence_id]["paper_title"] = chunk.get("paper_title", "")
+
+            design = (
+                paper_metadata.get("study_design")
+                or study_design
+            ).replace("_", " ")
+
+            block = f"""
+[{evidence_id}]
+
+Paper: {chunk.get("paper_title", "")}
+Study Design: {design} | Publication Year: {paper_metadata.get("publication_year") or publication_year}
+Section: {section_path}
+
+{text}
+"""
+
+        else:
+
+            block = f"""
 [{evidence_id}]
 
 Drug: {drug}
