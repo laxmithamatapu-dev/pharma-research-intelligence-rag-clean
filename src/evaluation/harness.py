@@ -416,7 +416,7 @@ class BenchmarkHarness:
             prompt = run_kwargs.get("input") or ""
             call = {
                 "stage": harness.stage,
-                "model": args[2] if len(args) > 2 else None,
+                "model": next((arg for arg in reversed(args[2:]) if not arg.startswith("-")), None),
                 "command": command,
                 "prompt": prompt,
                 "prompt_chars": len(prompt),

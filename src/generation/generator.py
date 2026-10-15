@@ -451,6 +451,7 @@ ANSWER:
             [
                 "ollama",
                 "run",
+                "--nowordwrap",
                 self.model_name
             ],
             input=prompt,
