@@ -20,23 +20,30 @@ EVIDENCE_CUES = {
     "pharmacokinetics": ("pharmacokinetic", "bioavailability", "clearance", "half-life", "exposure"),
 }
 
-STUDY_DESIGN_CUES = {
-    "randomized_phase_I": ("phase i", "randomized"),
-    "randomized_phase_II": ("phase ii", "randomized"),
-    "randomized_phase_III": ("phase iii", "randomized"),
-    "single_arm": ("single-arm", "single arm"),
-    "retrospective_cohort": ("retrospective cohort", "retrospective"),
-    "prospective_cohort": ("prospective cohort", "prospective"),
-    "systematic_review": ("systematic review",),
-    "meta_analysis": ("meta-analysis", "meta analysis"),
-    "in_vitro": ("in vitro", "cell line"),
-    "in_vivo": ("in vivo", "xenograft"),
-}
+RANDOMIZED_CUES = (("randomized", "randomised"), False)
+
+STUDY_DESIGN_RULES = (
+    ("systematic_review", ((("systematic review",), False),)),
+    ("meta_analysis", ((("meta-analysis", "meta analysis"), False),)),
+    ("randomized_phase_III", ((("phase iii", "phase 3"), True), RANDOMIZED_CUES)),
+    ("randomized_phase_II", ((("phase ii", "phase 2"), True), RANDOMIZED_CUES)),
+    ("randomized_phase_I", ((("phase i", "phase 1"), True), RANDOMIZED_CUES)),
+    ("randomized_trial", (RANDOMIZED_CUES,)),
+    ("single_arm", ((("single-arm", "single arm"), False),)),
+    ("retrospective_cohort", ((("retrospective cohort", "retrospective"), False),)),
+    ("prospective_cohort", ((("prospective cohort", "prospective"), False),)),
+    ("in_vitro", ((("in vitro", "cell line"), False),)),
+    ("in_vivo", ((("in vivo", "xenograft"), False),)),
+)
 
 
-def _matches(text: str, cues: tuple[str, ...]) -> bool:
+def _matches(text: str, cues: tuple[str, ...], whole_word: bool = False) -> bool:
     lowered = text.casefold()
-    return any(cue in lowered for cue in cues)
+    suffix = r"(?![a-z0-9])" if whole_word else ""
+    return any(
+        re.search(rf"(?<![a-z0-9]){re.escape(cue)}{suffix}", lowered)
+        for cue in cues
+    )
 
 
 def normalize_article_type(value: str | None) -> str:
@@ -56,8 +63,8 @@ def normalize_article_type(value: str | None) -> str:
 
 def infer_study_design(article: dict[str, Any]) -> str:
     text = " ".join(str(article.get(key, "")) for key in ("title", "abstract", "article_type"))
-    for design, cues in STUDY_DESIGN_CUES.items():
-        if _matches(text, cues):
+    for design, required_groups in STUDY_DESIGN_RULES:
+        if all(_matches(text, cues, whole_word) for cues, whole_word in required_groups):
             return design
     article_type = normalize_article_type(article.get("article_type"))
     if article_type == "systematic_review":
