@@ -371,3 +371,10 @@ Each item is a fact with evidence; no fixes proposed yet.
 48. E2a (title-context passage vectors): answer-chunk recall@20 0.35 → 0.60, pool entry 9 → 14/20, but delivery unchanged (6/20) and fact visibility +3.8 pts → decision `reranker_bottleneck`. Title context halves within-paper discrimination (0.93 → 0.50) and reduces pool diversity (18 → 12 papers). Use titles for paper retrieval, not passage ranking.
 49. Generation: fabricated author attribution ("Huang et al. [E2]") causes total answer loss (L1-16, 2/2 runs); numbers omitted despite being in evidence (L1-05, L1-12); identical prompt yields different fact recall (L1-08) — generation lacks seed/temperature control.
 50. Controls abstained with 0 cited claims in 4/4 runs.
+
+## Discovery Log — pass 10 (2026-10-15, passage selection study; see [PASSAGE_SELECTION_STUDY.md](PASSAGE_SELECTION_STUDY.md))
+51. Passage-selection ceiling with current pools: 33/52 L1 facts (today 26). 19 lost facts are unreachable without retrieval changes.
+52. Quota 2 → 3 (current model): L1 facts 26 → 31, answer chunks 6 → 8, 0 regressions, L2 unchanged, prompt size unchanged. Quota 4 = quota 3.
+53. MedCPT cross-encoder: L1 facts 23–25 (worse), L2 +3 papers, 3.0× rerank cost (0.193 vs 0.064 s/candidate). Not an improvement for L1.
+54. Discussion > Results preference is shared by both cross-encoders and is not a penalty on numbers (rank corr ≈ 0); window max-scoring fixes within-paper order but hurts cross-paper ranking.
+55. Scoring all chunks of the gold paper puts the answer chunk in the top 3 for 10/16 (MiniLM) / 11/16 (window) papers — supports paper-first passage selection.
