@@ -83,9 +83,11 @@ class QwenGenerator:
 
     def __init__(
         self,
-        model_name: str = "qwen2.5:7b"
+        model_name: str = "qwen2.5:7b",
+        timeout: float = 600.0,
     ):
         self.model_name = model_name
+        self.timeout = timeout
 
         print(
             f"\nUsing Ollama model: "
@@ -457,17 +459,23 @@ ANSWER:
         )
         start = time.time()
 
-        result = subprocess.run(
-            [
-                "ollama",
-                "run",
-                "--nowordwrap",
-                self.model_name
-            ],
-            input=prompt,
-            text=True,
-            capture_output=True
-        )
+        try:
+            result = subprocess.run(
+                [
+                    "ollama",
+                    "run",
+                    "--nowordwrap",
+                    self.model_name
+                ],
+                input=prompt,
+                text=True,
+                capture_output=True,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError(
+                f"Ollama generation timed out after {self.timeout:.0f} seconds"
+            ) from error
 
         print(
             f"\nOllama Call Time: "

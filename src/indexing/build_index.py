@@ -34,6 +34,8 @@ MANIFEST_PATH = XML_FOLDER.parents[1] / "manifests" / "index_manifest.json"
 QUALITY_REPORT_PATH = XML_FOLDER.parents[1] / "manifests" / "metadata_quality_report.json"
 CHECKPOINT_PATH = XML_FOLDER.parents[1] / "manifests" / "index_checkpoint.json"
 BUILD_LOG_PATH = XML_FOLDER.parents[1] / "manifests" / "index_build.log"
+CHROMA_DIR = XML_FOLDER.parents[1] / "chromadb"
+BACKUP_DIR = XML_FOLDER.parents[1] / "backups"
 
 
 def _configure_build_logger():
@@ -428,9 +430,9 @@ if __name__ == "__main__":
     else:
         if not args.rebuild:
             raise SystemExit("Refusing to build without --rebuild. Run --audit-only first.")
-        chroma_dir = Path("data/chromadb")
+        chroma_dir = CHROMA_DIR
         if chroma_dir.exists():
-            backup_dir = Path("data/backups") / (
+            backup_dir = BACKUP_DIR / (
                 f"chromadb_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
             backup_dir.parent.mkdir(parents=True, exist_ok=True)

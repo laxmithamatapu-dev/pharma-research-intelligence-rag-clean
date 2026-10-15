@@ -1,11 +1,15 @@
+from pathlib import Path
+
 import chromadb
 
 
 COLLECTION_NAME = "pharma_research"
 
+CHROMA_PATH = Path(__file__).resolve().parents[2] / "data" / "chromadb"
+
 
 client = chromadb.PersistentClient(
-    path="data/chromadb"
+    path=str(CHROMA_PATH)
 )
 
 collection = client.get_or_create_collection(

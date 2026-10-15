@@ -89,6 +89,38 @@ class OllamaInvocationTests(unittest.TestCase):
         self.assertEqual(command[:2], ["ollama", "run"])
         self.assertIn("--nowordwrap", command)
         self.assertEqual(command[-1], generator.model_name)
+        self.assertEqual(run.call_args.kwargs["timeout"], generator.timeout)
+
+    def test_generation_timeout_raises_runtime_error(self):
+        generator = make_generator()
+        with mock.patch(
+            "generation.generator.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="ollama", timeout=generator.timeout),
+        ), contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "timed out"):
+                generator.generate("Which biomarker?", CONTEXT, {})
+
+
+class IndexPathTests(unittest.TestCase):
+
+    def test_chroma_path_is_absolute_and_independent_of_working_directory(self):
+        result = subprocess.run(
+            [
+                sys.executable, "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]); "
+                "from vector_store.chroma_store import CHROMA_PATH, collection; "
+                "print(CHROMA_PATH); print(collection.count())",
+                str(Path(__file__).resolve().parents[1]),
+            ],
+            capture_output=True,
+            text=True,
+            cwd="/tmp",
+            check=True,
+        )
+        path, count = result.stdout.strip().splitlines()[-2:]
+        expected = Path(__file__).resolve().parents[2] / "data" / "chromadb"
+        self.assertEqual(Path(path), expected)
+        self.assertGreater(int(count), 0)
 
 
 if __name__ == "__main__":
