@@ -1,0 +1,1123 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "L1-01",
+      "level": 1,
+      "category": "safety",
+      "review_status": "draft",
+      "question": "In the real-world cohort of metastatic breast cancer patients who permanently discontinued trastuzumab deruxtecan, what were the reasons for discontinuation?",
+      "gold_pmcs": [
+        "PMC13564716"
+      ],
+      "gold_chunks": {
+        "PMC13564716_0005": 2
+      },
+      "facts": [
+        {
+          "id": "progression_82_8",
+          "description": "Progressive disease was the primary reason (82.8%)",
+          "pattern": "82\\.8\\s*%",
+          "evidence_chunks": [
+            "PMC13564716_0005"
+          ]
+        },
+        {
+          "id": "adverse_events_14",
+          "description": "Adverse events accounted for 14.0%",
+          "pattern": "\\b14(?:\\.0)?\\s*%",
+          "evidence_chunks": [
+            "PMC13564716_0005"
+          ]
+        },
+        {
+          "id": "cohort_93",
+          "description": "93 patients permanently discontinued",
+          "pattern": "\\b93\\b",
+          "evidence_chunks": [
+            "PMC13564716_0005"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-02",
+      "level": 1,
+      "category": "safety",
+      "review_status": "draft",
+      "question": "Which baseline serum biomarker predicted severe immune-related liver injury after nivolumab plus ipilimumab, and what cutoff was identified?",
+      "gold_pmcs": [
+        "PMC13600002"
+      ],
+      "gold_chunks": {
+        "PMC13600002_0015": 2,
+        "PMC13600002_0016": 2
+      },
+      "facts": [
+        {
+          "id": "kl6",
+          "description": "Baseline serum KL-6",
+          "pattern": "KL-?6",
+          "evidence_chunks": [
+            "PMC13600002_0015",
+            "PMC13600002_0016"
+          ]
+        },
+        {
+          "id": "auc_0_755",
+          "description": "AUC 0.755",
+          "pattern": "0\\.755",
+          "evidence_chunks": [
+            "PMC13600002_0015"
+          ]
+        },
+        {
+          "id": "cutoff",
+          "description": "Youden cutoff 418 U/mL; 400 U/mL adopted threshold",
+          "pattern": "\\b418\\b|\\b400\\s*U/mL",
+          "evidence_chunks": [
+            "PMC13600002_0015",
+            "PMC13600002_0016"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-03",
+      "level": 1,
+      "category": "efficacy",
+      "review_status": "draft",
+      "question": "What were the response rates, progression-free survival and overall survival with first-line afatinib versus osimertinib after 3 years of follow-up in EGFR-mutant NSCLC?",
+      "gold_pmcs": [
+        "PMC13427999"
+      ],
+      "gold_chunks": {
+        "PMC13427999_0006": 2
+      },
+      "facts": [
+        {
+          "id": "orr",
+          "description": "ORR 66.0% osimertinib vs 60.5% afatinib",
+          "pattern": "66\\.0\\s*%|60\\.5\\s*%",
+          "evidence_chunks": [
+            "PMC13427999_0006"
+          ]
+        },
+        {
+          "id": "pfs",
+          "description": "Median PFS 18.2 vs 13.5 months",
+          "pattern": "18\\.2|13\\.5",
+          "evidence_chunks": [
+            "PMC13427999_0006"
+          ]
+        },
+        {
+          "id": "os",
+          "description": "Median OS 37.0 vs 40.5 months",
+          "pattern": "37\\.0|40\\.5",
+          "evidence_chunks": [
+            "PMC13427999_0006"
+          ]
+        },
+        {
+          "id": "os_hr",
+          "description": "OS HR 1.01",
+          "pattern": "\\b1\\.01\\b",
+          "evidence_chunks": [
+            "PMC13427999_0006"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-04",
+      "level": 1,
+      "category": "efficacy",
+      "review_status": "draft",
+      "question": "How much did semaglutide 2.4 mg reduce ad libitum energy intake compared with placebo at weeks 20, 40 and 60?",
+      "gold_pmcs": [
+        "PMC13494093"
+      ],
+      "gold_chunks": {
+        "PMC13494093_0011": 2
+      },
+      "facts": [
+        {
+          "id": "week20",
+          "description": "-367 kcal at week 20",
+          "pattern": "\\b367\\b",
+          "evidence_chunks": [
+            "PMC13494093_0011"
+          ]
+        },
+        {
+          "id": "week40",
+          "description": "-317 kcal at week 40",
+          "pattern": "\\b317\\b",
+          "evidence_chunks": [
+            "PMC13494093_0011"
+          ]
+        },
+        {
+          "id": "week60",
+          "description": "-200 kcal at week 60",
+          "pattern": "\\b200(?:\\.0)?\\s*kcal",
+          "evidence_chunks": [
+            "PMC13494093_0011"
+          ]
+        },
+        {
+          "id": "relative",
+          "description": "29.9% lower than placebo at week 20",
+          "pattern": "29\\.9\\s*%",
+          "evidence_chunks": [
+            "PMC13494093_0011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-05",
+      "level": 1,
+      "category": "outcomes",
+      "review_status": "draft",
+      "question": "Did combining radium-223 with enzalutamide improve progression-free and overall survival compared with enzalutamide alone in metastatic castration-resistant prostate cancer?",
+      "gold_pmcs": [
+        "PMC13449031"
+      ],
+      "gold_chunks": {
+        "PMC13449031_0009": 2
+      },
+      "facts": [
+        {
+          "id": "pfs_22_vs_5",
+          "description": "Median PFS 22 vs 5 months",
+          "pattern": "\\b22\\s*months",
+          "evidence_chunks": [
+            "PMC13449031_0009"
+          ]
+        },
+        {
+          "id": "pfs_p",
+          "description": "PFS p = 0.048",
+          "pattern": "0\\.048",
+          "evidence_chunks": [
+            "PMC13449031_0009"
+          ]
+        },
+        {
+          "id": "os_ns",
+          "description": "No OS difference (p = 0.602)",
+          "pattern": "0\\.602|no significant",
+          "evidence_chunks": [
+            "PMC13449031_0009"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-06",
+      "level": 1,
+      "category": "outcomes",
+      "review_status": "draft",
+      "question": "Is the EGFR adjusted variant allele frequency associated with progression-free survival on first-line osimertinib?",
+      "gold_pmcs": [
+        "PMC13511178"
+      ],
+      "gold_chunks": {
+        "PMC13511178_0006": 2
+      },
+      "facts": [
+        {
+          "id": "no_association",
+          "description": "aVAF not associated with PFS",
+          "pattern": "not (?:significantly )?associated|no (?:significant )?association",
+          "evidence_chunks": [
+            "PMC13511178_0006"
+          ]
+        },
+        {
+          "id": "hr_1_13",
+          "description": "HR 1.13 for aVAF < 50%",
+          "pattern": "1\\.13",
+          "evidence_chunks": [
+            "PMC13511178_0006"
+          ]
+        },
+        {
+          "id": "hr_0_60",
+          "description": "HR 0.60 for aVAF > 100%",
+          "pattern": "0\\.60\\b",
+          "evidence_chunks": [
+            "PMC13511178_0006"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-07",
+      "level": 1,
+      "category": "mechanism",
+      "review_status": "draft",
+      "question": "What molecular mechanism links myeloperoxidase to osimertinib-induced cardiotoxicity?",
+      "gold_pmcs": [
+        "PMC13368672"
+      ],
+      "gold_chunks": {
+        "PMC13368672_0022": 2,
+        "PMC13368672_0023": 2
+      },
+      "facts": [
+        {
+          "id": "mpo_up",
+          "description": "MPO expression increased with osimertinib",
+          "pattern": "\\bMPO\\b|myeloperoxidase",
+          "evidence_chunks": [
+            "PMC13368672_0022"
+          ]
+        },
+        {
+          "id": "pathway",
+          "description": "AMPK/PI3K/Akt/eNOS pathway inhibited",
+          "pattern": "AMPK",
+          "evidence_chunks": [
+            "PMC13368672_0022",
+            "PMC13368672_0023"
+          ]
+        },
+        {
+          "id": "enos",
+          "description": "eNOS phosphorylation reduced",
+          "pattern": "eNOS",
+          "evidence_chunks": [
+            "PMC13368672_0023"
+          ]
+        },
+        {
+          "id": "mpo_inhibitor",
+          "description": "MPO inhibitor partially reverses the effect",
+          "pattern": "MPO inhibit",
+          "evidence_chunks": [
+            "PMC13368672_0023"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-08",
+      "level": 1,
+      "category": "mechanism",
+      "review_status": "draft",
+      "question": "How did the Egfr V804F mutation change sensitivity to osimertinib and afatinib in the syngeneic mouse model cells?",
+      "gold_pmcs": [
+        "PMC13394164"
+      ],
+      "gold_chunks": {
+        "PMC13394164_0012": 2
+      },
+      "facts": [
+        {
+          "id": "osimertinib_ic50",
+          "description": "Osimertinib IC50 174-320 nM vs 30 nM parental",
+          "pattern": "\\b174\\b|\\b320\\b",
+          "evidence_chunks": [
+            "PMC13394164_0012"
+          ]
+        },
+        {
+          "id": "fold_change",
+          "description": "Mean 8.2-fold",
+          "pattern": "8\\.2",
+          "evidence_chunks": [
+            "PMC13394164_0012"
+          ]
+        },
+        {
+          "id": "afatinib_ic50",
+          "description": "Afatinib IC50 12.2-12.8 nM",
+          "pattern": "12\\.[28]",
+          "evidence_chunks": [
+            "PMC13394164_0012"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-09",
+      "level": 1,
+      "category": "mechanism",
+      "review_status": "draft",
+      "question": "What is the evidence that SPEN alterations are a biomarker of androgen receptor pathway inhibitor resistance in metastatic prostate cancer?",
+      "gold_pmcs": [
+        "PMC13563593"
+      ],
+      "gold_chunks": {
+        "PMC13563593_0023": 2,
+        "PMC13563593_0024": 2
+      },
+      "facts": [
+        {
+          "id": "cohort_127",
+          "description": "SPEN alterations in 127 patients",
+          "pattern": "\\b127\\b",
+          "evidence_chunks": [
+            "PMC13563593_0023"
+          ]
+        },
+        {
+          "id": "ttnt_hr",
+          "description": "TTNT HR 2.57",
+          "pattern": "2\\.57",
+          "evidence_chunks": [
+            "PMC13563593_0024"
+          ]
+        },
+        {
+          "id": "msk_os",
+          "description": "MSK-IMPACT OS 25.4 vs 64.7 months",
+          "pattern": "25\\.4|64\\.7",
+          "evidence_chunks": [
+            "PMC13563593_0024"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-10",
+      "level": 1,
+      "category": "clinical_findings",
+      "review_status": "draft",
+      "question": "What alterations were found in the lung adenocarcinoma patient who developed an acquired EML4-ALK fusion and BRAF V600G after osimertinib, and how was the patient treated?",
+      "gold_pmcs": [
+        "PMC13508028"
+      ],
+      "gold_chunks": {
+        "PMC13508028_0005": 2,
+        "PMC13508028_0010": 2
+      },
+      "facts": [
+        {
+          "id": "alk",
+          "description": "Acquired EML4-ALK fusion",
+          "pattern": "EML4-?ALK|ALK (?:fusion|rearrangement)",
+          "evidence_chunks": [
+            "PMC13508028_0005",
+            "PMC13508028_0010"
+          ]
+        },
+        {
+          "id": "braf",
+          "description": "BRAF V600G",
+          "pattern": "V600G",
+          "evidence_chunks": [
+            "PMC13508028_0010"
+          ]
+        },
+        {
+          "id": "lorlatinib",
+          "description": "Treated with lorlatinib",
+          "pattern": "lorlatinib",
+          "evidence_chunks": [
+            "PMC13508028_0010"
+          ]
+        },
+        {
+          "id": "pdl1",
+          "description": "PD-L1 TPS 40%",
+          "pattern": "\\b40\\s*%",
+          "evidence_chunks": [
+            "PMC13508028_0005"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-11",
+      "level": 1,
+      "category": "clinical_findings",
+      "review_status": "draft",
+      "question": "How long was osimertinib given before squamous transformation was confirmed in the EGFR-mutant lung adenocarcinoma case report?",
+      "gold_pmcs": [
+        "PMC13479129"
+      ],
+      "gold_chunks": {
+        "PMC13479129_0004": 2
+      },
+      "facts": [
+        {
+          "id": "first_progression",
+          "description": "~39 months to first suspected progression",
+          "pattern": "\\b39\\s*months",
+          "evidence_chunks": [
+            "PMC13479129_0004"
+          ]
+        },
+        {
+          "id": "total_duration",
+          "description": "~52 months total osimertinib",
+          "pattern": "\\b52\\s*months",
+          "evidence_chunks": [
+            "PMC13479129_0004"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-12",
+      "level": 1,
+      "category": "clinical_findings",
+      "review_status": "draft",
+      "question": "What resistance alterations were found on rebiopsy after progression on first-line osimertinib in the real-world rebiopsy cohort?",
+      "gold_pmcs": [
+        "PMC13529361"
+      ],
+      "gold_chunks": {
+        "PMC13529361_0006": 2
+      },
+      "facts": [
+        {
+          "id": "new_alterations",
+          "description": "38.8% had new genomic or histologic alterations",
+          "pattern": "38\\.8\\s*%",
+          "evidence_chunks": [
+            "PMC13529361_0006"
+          ]
+        },
+        {
+          "id": "transformation",
+          "description": "Histologic transformation in 4.9%",
+          "pattern": "4\\.9\\s*%",
+          "evidence_chunks": [
+            "PMC13529361_0006"
+          ]
+        },
+        {
+          "id": "c797s",
+          "description": "On-target C797S",
+          "pattern": "C797S",
+          "evidence_chunks": [
+            "PMC13529361_0006"
+          ]
+        },
+        {
+          "id": "met",
+          "description": "MET overexpression/amplification",
+          "pattern": "\\bMET\\b",
+          "evidence_chunks": [
+            "PMC13529361_0006"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-13",
+      "level": 1,
+      "category": "trial_design",
+      "review_status": "draft",
+      "question": "What is the primary outcome and sample size rationale of the randomized trial of Yifeixiaoji decoction added to osimertinib?",
+      "gold_pmcs": [
+        "PMC13537402"
+      ],
+      "gold_chunks": {
+        "PMC13537402_0013": 2
+      },
+      "facts": [
+        {
+          "id": "primary_pfs",
+          "description": "Primary outcome PFS",
+          "pattern": "progression-free survival|\\bPFS\\b",
+          "evidence_chunks": [
+            "PMC13537402_0013"
+          ]
+        },
+        {
+          "id": "target_hr",
+          "description": "Target HR 0.66",
+          "pattern": "0\\.66",
+          "evidence_chunks": [
+            "PMC13537402_0013"
+          ]
+        },
+        {
+          "id": "events",
+          "description": "About 176 PFS events",
+          "pattern": "\\b176\\b",
+          "evidence_chunks": [
+            "PMC13537402_0013"
+          ]
+        },
+        {
+          "id": "flaura_basis",
+          "description": "Based on FLAURA median PFS 18.9 months",
+          "pattern": "18\\.9",
+          "evidence_chunks": [
+            "PMC13537402_0013"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-14",
+      "level": 1,
+      "category": "trial_design",
+      "review_status": "draft",
+      "question": "In the final analysis of CheckMate 9ER, what were the objective response rate and duration of response with nivolumab plus cabozantinib versus sunitinib?",
+      "gold_pmcs": [
+        "PMC12522107"
+      ],
+      "gold_chunks": {
+        "PMC12522107_0007": 2
+      },
+      "facts": [
+        {
+          "id": "orr",
+          "description": "ORR 55.7% vs 27.4%",
+          "pattern": "55\\.7|27\\.4",
+          "evidence_chunks": [
+            "PMC12522107_0007"
+          ]
+        },
+        {
+          "id": "dor",
+          "description": "Median DOR 22.0 vs 15.2 months",
+          "pattern": "22\\.0|15\\.2",
+          "evidence_chunks": [
+            "PMC12522107_0007"
+          ]
+        },
+        {
+          "id": "cr",
+          "description": "CR 13.9% vs 4.6%",
+          "pattern": "13\\.9",
+          "evidence_chunks": [
+            "PMC12522107_0007"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-15",
+      "level": 1,
+      "category": "outcomes",
+      "review_status": "draft",
+      "question": "In Japanese participants of KEYNOTE-671, how did perioperative pembrolizumab affect nodal downstaging and residual viable tumor?",
+      "gold_pmcs": [
+        "PMC13595008"
+      ],
+      "gold_chunks": {
+        "PMC13595008_0011": 2
+      },
+      "facts": [
+        {
+          "id": "downstaging",
+          "description": "Nodal downstaging 39% vs 21%",
+          "pattern": "\\b39\\s*%|\\b21\\s*%",
+          "evidence_chunks": [
+            "PMC13595008_0011"
+          ]
+        },
+        {
+          "id": "rvt",
+          "description": "Median %RVT 33% vs 52%",
+          "pattern": "\\b33\\s*%|\\b52\\s*%",
+          "evidence_chunks": [
+            "PMC13595008_0011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-16",
+      "level": 1,
+      "category": "clinical_findings",
+      "review_status": "draft",
+      "question": "Which variables were most associated with loss of response to adalimumab in juvenile idiopathic arthritis?",
+      "gold_pmcs": [
+        "PMC13273996"
+      ],
+      "gold_chunks": {
+        "PMC13273996_0003": 2
+      },
+      "facts": [
+        {
+          "id": "anti_drug_antibodies",
+          "description": "Anti-adalimumab antibody level",
+          "pattern": "ADA_?ab|anti-?adalimumab antibod|anti-?drug antibod",
+          "evidence_chunks": [
+            "PMC13273996_0003"
+          ]
+        },
+        {
+          "id": "drug_level",
+          "description": "Adalimumab drug level",
+          "pattern": "ADA_?drug|drug level|adalimumab level",
+          "evidence_chunks": [
+            "PMC13273996_0003"
+          ]
+        },
+        {
+          "id": "hla_b27",
+          "description": "HLA-B27 status",
+          "pattern": "HLA-?B27",
+          "evidence_chunks": [
+            "PMC13273996_0003"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L1-C1",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "question": "What is the mechanism of action of teprotumumab?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "teprotumumab"
+      ]
+    },
+    {
+      "id": "L1-C2",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "question": "What is the efficacy of imatinib in asthma?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "asthma"
+      ]
+    },
+    {
+      "id": "L2-01",
+      "level": 2,
+      "category": "resistance",
+      "review_status": "draft",
+      "question": "What resistance mechanisms emerge after first-line osimertinib?",
+      "gold_pmcs": [
+        "PMC13530993",
+        "PMC13585410",
+        "PMC13563458",
+        "PMC13508028",
+        "PMC13579456",
+        "PMC13479129",
+        "PMC13508615",
+        "PMC13478582",
+        "PMC13520340",
+        "PMC13529361",
+        "PMC13510353"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "on_target",
+          "gold_pmcs": [
+            "PMC13530993",
+            "PMC13585410",
+            "PMC13563458"
+          ]
+        },
+        {
+          "id": "bypass",
+          "gold_pmcs": [
+            "PMC13508028",
+            "PMC13579456"
+          ]
+        },
+        {
+          "id": "transformation",
+          "gold_pmcs": [
+            "PMC13479129",
+            "PMC13508615"
+          ]
+        },
+        {
+          "id": "adaptive",
+          "gold_pmcs": [
+            "PMC13478582",
+            "PMC13520340"
+          ]
+        },
+        {
+          "id": "real_world",
+          "gold_pmcs": [
+            "PMC13529361",
+            "PMC13510353"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-02",
+      "level": 2,
+      "category": "efficacy_comparison",
+      "review_status": "draft",
+      "question": "How do outcomes compare between afatinib and osimertinib in EGFR-mutant NSCLC, including uncommon EGFR mutations?",
+      "gold_pmcs": [
+        "PMC13427999",
+        "PMC13394325",
+        "PMC13573738",
+        "PMC13574751"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "first_line_os",
+          "gold_pmcs": [
+            "PMC13427999"
+          ]
+        },
+        {
+          "id": "uncommon_mutations",
+          "gold_pmcs": [
+            "PMC13394325",
+            "PMC13573738"
+          ]
+        },
+        {
+          "id": "network_comparison",
+          "gold_pmcs": [
+            "PMC13574751"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-03",
+      "level": 2,
+      "category": "safety",
+      "review_status": "draft",
+      "question": "What immune-related adverse events have been reported with nivolumab alone or combined with ipilimumab?",
+      "gold_pmcs": [
+        "PMC13600002",
+        "PMC13597272",
+        "PMC13605366",
+        "PMC13583422",
+        "PMC13612749"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "liver",
+          "gold_pmcs": [
+            "PMC13600002"
+          ]
+        },
+        {
+          "id": "thyroid",
+          "gold_pmcs": [
+            "PMC13597272"
+          ]
+        },
+        {
+          "id": "pneumonitis",
+          "gold_pmcs": [
+            "PMC13605366"
+          ]
+        },
+        {
+          "id": "ocular",
+          "gold_pmcs": [
+            "PMC13583422"
+          ]
+        },
+        {
+          "id": "renal",
+          "gold_pmcs": [
+            "PMC13612749"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-04",
+      "level": 2,
+      "category": "resistance",
+      "review_status": "draft",
+      "question": "What mechanisms drive resistance to enzalutamide in prostate cancer?",
+      "gold_pmcs": [
+        "PMC13394060",
+        "PMC13480344",
+        "PMC13563593",
+        "PMC13466754",
+        "PMC13447160",
+        "PMC13568755",
+        "PMC13478015",
+        "PMC13562513"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "ferroptosis",
+          "gold_pmcs": [
+            "PMC13394060",
+            "PMC13480344"
+          ]
+        },
+        {
+          "id": "spen",
+          "gold_pmcs": [
+            "PMC13563593"
+          ]
+        },
+        {
+          "id": "plasticity",
+          "gold_pmcs": [
+            "PMC13466754",
+            "PMC13447160"
+          ]
+        },
+        {
+          "id": "metabolic",
+          "gold_pmcs": [
+            "PMC13568755",
+            "PMC13478015"
+          ]
+        },
+        {
+          "id": "liquid_biopsy",
+          "gold_pmcs": [
+            "PMC13562513"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-05",
+      "level": 2,
+      "category": "efficacy_comparison",
+      "review_status": "draft",
+      "question": "How do abiraterone and enzalutamide compare in efficacy and safety for metastatic prostate cancer?",
+      "gold_pmcs": [
+        "PMC13405643",
+        "PMC13427783",
+        "PMC13374230",
+        "PMC13488195"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "mcspc_outcomes",
+          "gold_pmcs": [
+            "PMC13405643"
+          ]
+        },
+        {
+          "id": "mcrpc_efficacy_safety",
+          "gold_pmcs": [
+            "PMC13427783"
+          ]
+        },
+        {
+          "id": "falls",
+          "gold_pmcs": [
+            "PMC13374230"
+          ]
+        },
+        {
+          "id": "hepatotoxicity",
+          "gold_pmcs": [
+            "PMC13488195"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-06",
+      "level": 2,
+      "category": "evidence_synthesis",
+      "review_status": "draft",
+      "question": "How are adalimumab drug levels and anti-drug antibodies related to clinical response?",
+      "gold_pmcs": [
+        "PMC13273996",
+        "PMC13337933",
+        "PMC13415550",
+        "PMC13429708"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "jia",
+          "gold_pmcs": [
+            "PMC13273996"
+          ]
+        },
+        {
+          "id": "dosing_schedule",
+          "gold_pmcs": [
+            "PMC13337933"
+          ]
+        },
+        {
+          "id": "paediatric_uveitis",
+          "gold_pmcs": [
+            "PMC13415550"
+          ]
+        },
+        {
+          "id": "uveitis_cohort",
+          "gold_pmcs": [
+            "PMC13429708"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-07",
+      "level": 2,
+      "category": "evidence_synthesis",
+      "review_status": "draft",
+      "question": "What is the evidence for semaglutide in MASLD and MASH?",
+      "gold_pmcs": [
+        "PMC13515630",
+        "PMC13572791",
+        "PMC13575885",
+        "PMC13589479",
+        "PMC13588371"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "mechanisms",
+          "gold_pmcs": [
+            "PMC13515630"
+          ]
+        },
+        {
+          "id": "clinical_reviews",
+          "gold_pmcs": [
+            "PMC13572791",
+            "PMC13575885"
+          ]
+        },
+        {
+          "id": "agonist_classes",
+          "gold_pmcs": [
+            "PMC13589479"
+          ]
+        },
+        {
+          "id": "preclinical",
+          "gold_pmcs": [
+            "PMC13588371"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-08",
+      "level": 2,
+      "category": "safety",
+      "review_status": "draft",
+      "question": "What safety risks are associated with trastuzumab deruxtecan?",
+      "gold_pmcs": [
+        "PMC13609577",
+        "PMC13564716",
+        "PMC13537819",
+        "PMC13597761",
+        "PMC13494281"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "ild_cardiac",
+          "gold_pmcs": [
+            "PMC13609577"
+          ]
+        },
+        {
+          "id": "discontinuation",
+          "gold_pmcs": [
+            "PMC13564716"
+          ]
+        },
+        {
+          "id": "ae_management",
+          "gold_pmcs": [
+            "PMC13537819"
+          ]
+        },
+        {
+          "id": "pharmacovigilance",
+          "gold_pmcs": [
+            "PMC13597761"
+          ]
+        },
+        {
+          "id": "network_meta_analysis",
+          "gold_pmcs": [
+            "PMC13494281"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2-09",
+      "level": 2,
+      "category": "safety_comparison",
+      "review_status": "draft",
+      "question": "How do the safety profiles of enzalutamide, apalutamide and darolutamide compare?",
+      "gold_pmcs": [
+        "PMC13541453",
+        "PMC13516075",
+        "PMC13374230",
+        "PMC13480082",
+        "PMC13488195",
+        "PMC13421037"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "interstitial_pneumonia",
+          "gold_pmcs": [
+            "PMC13541453"
+          ]
+        },
+        {
+          "id": "cns",
+          "gold_pmcs": [
+            "PMC13516075"
+          ]
+        },
+        {
+          "id": "falls",
+          "gold_pmcs": [
+            "PMC13374230"
+          ]
+        },
+        {
+          "id": "hypertension",
+          "gold_pmcs": [
+            "PMC13480082"
+          ]
+        },
+        {
+          "id": "hepatotoxicity",
+          "gold_pmcs": [
+            "PMC13488195"
+          ]
+        },
+        {
+          "id": "pharmacology_adr",
+          "gold_pmcs": [
+            "PMC13421037"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -16,3 +16,4 @@ models/
 debug_runs/
 
 *.log
+benchmark_runs/
