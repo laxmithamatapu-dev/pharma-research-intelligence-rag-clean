@@ -132,6 +132,28 @@ class AnswerRepairTests(unittest.TestCase):
         self.assertNotIn("likely", answer)
 
 
+class StatisticBracketTests(unittest.TestCase):
+
+    def setUp(self):
+        self.generator = make_generator()
+
+    def test_statistics_in_brackets_become_parentheses(self):
+        answer = self.generator.normalize_answer("hsCRP fell 37.8% [95% CI, -39.7, -35.9] by week 104 [E2].")
+        self.assertIn("(95% CI, -39.7, -35.9)", answer)
+        self.assertEqual(self.generator.validate_answer(answer, CONTEXT), [])
+        self.assertIn("(IQR 0-200)", self.generator.normalize_answer("median 66 AU/mL [IQR 0-200] [E1]"))
+
+    def test_numeric_footnotes_are_still_rejected(self):
+        answer = self.generator.normalize_answer("As reported earlier [1] [E1].")
+        self.assertIn("non-evidence citation syntax: 1", self.generator.validate_answer(answer, CONTEXT))
+
+    def test_heading_line_content_is_repaired(self):
+        answer = "## Outcomes: Effects were likely durable. The PFS was 22 months [E1].\n## References\n[E1]"
+        repaired = self.generator._drop_offending_sentences(answer, CONTEXT)
+        self.assertIn("## Outcomes: The PFS was 22 months [E1].", repaired)
+        self.assertNotIn("likely", repaired)
+
+
 class OllamaInvocationTests(unittest.TestCase):
 
     def chat_response(self, content, status=200):

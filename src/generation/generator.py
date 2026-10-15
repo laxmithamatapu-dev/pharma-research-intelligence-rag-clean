@@ -20,6 +20,10 @@ AUTHOR_PATTERN = re.compile(rf"\b{AUTHOR_NAME}")
 
 SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=\S)")
 
+STATISTIC_BRACKET_PATTERN = re.compile(
+    r"\[(?!\s*E\d)([^\[\]]*?(?:\d\s*%|\b(?:CI|IQR|HR|OR|RR|SD|SE|aHR|aOR)\b|\bp\s*[=<>≤])[^\[\]]*)\]"
+)
+
 NON_EVIDENCE_CITATION_PATTERN = re.compile(
     r"\b(?:doi|pmid|pmcid)\b|"
     r"\b[A-Z][A-Za-z'-]+\s+et\s+al\.?|"
@@ -301,6 +305,8 @@ ANSWER:
         )
         answer = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", answer)
 
+        answer = STATISTIC_BRACKET_PATTERN.sub(r"(\1)", answer)
+
         evidence_list = r"E\d+(?:(?:\s*[,;]\s*|\s*-\s*)E?\d+)*"
 
         def normalize_group(match: re.Match) -> str:
@@ -445,8 +451,17 @@ ANSWER:
         for line in answer.splitlines():
             if re.match(r"^\s*##\s+References\s*$", line, re.IGNORECASE):
                 in_references = True
-            if in_references or not line.strip() or line.lstrip().startswith("#"):
+            if in_references or not line.strip():
                 kept_lines.append(line)
+                continue
+            if line.lstrip().startswith("#"):
+                heading = re.match(r"^(\s*#+[^:]*:\s*)(\S.*)$", line)
+                if not heading:
+                    kept_lines.append(line)
+                    continue
+                prefix, content = heading.groups()
+                kept = [s for s in SENTENCE_BOUNDARY.split(content) if not self.validate_answer(s, context)]
+                kept_lines.append(prefix + " ".join(kept) if kept else prefix.rstrip())
                 continue
             marker = re.match(r"^\s*(?:[-*]|\d+[.)])\s+", line)
             prefix = marker.group(0) if marker else ""
