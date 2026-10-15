@@ -46,12 +46,13 @@ def command_embed(args):
         import embeddings.embedder as embedder
         from vector_store.chroma_store import collection
 
+    article_tokenizer, article_model = embedder.get_article_encoder()
     everything = collection.get(include=["documents"])
     ids = everything["ids"]
     documents = everything["documents"]
     titles = load_titles()
     missing_titles = sorted({chunk_id.rsplit("_", 1)[0] for chunk_id in ids} - set(titles))
-    vectors = np.zeros((len(ids), embedder.article_model.config.hidden_size), dtype="float32")
+    vectors = np.zeros((len(ids), article_model.config.hidden_size), dtype="float32")
     started = time.perf_counter()
     for start in range(0, len(ids), args.batch_size):
         batch_ids = ids[start:start + args.batch_size]
@@ -59,7 +60,7 @@ def command_embed(args):
             [titles.get(chunk_id.rsplit("_", 1)[0], ""), documents[start + offset].strip()]
             for offset, chunk_id in enumerate(batch_ids)
         ]
-        inputs = embedder.article_tokenizer(
+        inputs = article_tokenizer(
             pairs,
             return_tensors="pt",
             truncation=True,
@@ -67,7 +68,7 @@ def command_embed(args):
             padding=True,
         )
         with torch.no_grad():
-            outputs = embedder.article_model(**inputs)
+            outputs = article_model(**inputs)
             pooled = embedder.mean_pooling(outputs.last_hidden_state, inputs["attention_mask"])
         vectors[start:start + len(batch_ids)] = pooled.cpu().numpy()
         if (start // args.batch_size) % 50 == 0:

@@ -250,7 +250,8 @@ def _without_captions(text):
 def _embed_pair(embedder, title, text):
     import torch
 
-    inputs = embedder.article_tokenizer(
+    article_tokenizer, article_model = embedder.get_article_encoder()
+    inputs = article_tokenizer(
         [[title, text]],
         return_tensors="pt",
         truncation=True,
@@ -258,14 +259,15 @@ def _embed_pair(embedder, title, text):
         padding=True,
     )
     with torch.no_grad():
-        outputs = embedder.article_model(**inputs)
+        outputs = article_model(**inputs)
         embedding = embedder.mean_pooling(outputs.last_hidden_state, inputs["attention_mask"])
     return embedding.squeeze().cpu().numpy()
 
 
 def _first_tokens(embedder, text, limit):
-    ids = embedder.article_tokenizer(text, add_special_tokens=False, truncation=False)["input_ids"][:limit]
-    return embedder.article_tokenizer.decode(ids)
+    article_tokenizer, _ = embedder.get_article_encoder()
+    ids = article_tokenizer(text, add_special_tokens=False, truncation=False)["input_ids"][:limit]
+    return article_tokenizer.decode(ids)
 
 
 def experiment_e1(lost, definitions, corpus, embedder):
