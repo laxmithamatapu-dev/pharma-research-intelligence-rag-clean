@@ -389,3 +389,6 @@ Each item is a fact with evidence; no fixes proposed yet.
 - Paper-first retrieval is the default (`RETRIEVAL_MODE=legacy` = rollback). Paper index `pharma_papers` (title + abstract, MedCPT CLS/IP) must be rebuilt after any passage rebuild.
 - Final baseline (49 questions): L1 facts visible 88 % dev / 81 % held-out; stated 71 % / 81 %; L2 coverage 0.66 / 0.53 (lower bound); 0/12 controls with claims; 0 validation failures over 103 replayed answers; generated answers median 119 s, p90 153 s; abstentions 3.8 s.
 - Service: `serve.py` (/health, /ask), systemd unit in `deploy/`; pinned deps in `requirements.lock`.
+
+## Checkpoint 2026-10-15
+Source of truth from this point: [PROJECT_STATE.md](PROJECT_STATE.md) (state), [LLM_EVALUATION.md](LLM_EVALUATION.md) (model evaluation register), [NEXT_STEPS.md](NEXT_STEPS.md) (ranked work, success criteria, plan). Retrieval workstream closed; next phase is generation fidelity and model evaluation.
