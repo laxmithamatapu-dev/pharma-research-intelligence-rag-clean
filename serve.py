@@ -11,6 +11,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 LOG_DIR = PROJECT_ROOT / "logs"
+UI_PATH = PROJECT_ROOT / "web" / "index.html"
 MAX_QUESTION_CHARS = 2000
 MAX_BODY_BYTES = 16384
 
@@ -62,8 +63,18 @@ def make_handler(service):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_page(self, path):
+            body = path.read_bytes()
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def do_GET(self):
-            if self.path == "/health":
+            if self.path in ("/", "/index.html"):
+                self._send_page(UI_PATH)
+            elif self.path == "/health":
                 self._send(HTTPStatus.OK, service.health())
             else:
                 self._send(HTTPStatus.NOT_FOUND, {"error": "not found"})

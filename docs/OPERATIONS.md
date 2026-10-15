@@ -31,6 +31,8 @@ Manifests: `data/manifests/index_manifest.json`, `data/manifests/paper_index_man
 | HTTP service | `HF_HUB_OFFLINE=1 OLLAMA_KEEP_ALIVE=-1 .venv/bin/python serve.py` |
 | systemd | `sudo cp deploy/pharma-rag.service /etc/systemd/system/ && sudo systemctl enable --now pharma-rag` |
 
+Web page: open `http://localhost:8000/` (question box, answer with clickable [E#] citations, evidence list). From another machine, forward port 8000 (VS Code Ports tab, or `ssh -L 8000:localhost:8000 azureuser@<vm-ip>`).
+
 Service API (binds `127.0.0.1:8000` by default):
 ```bash
 curl -s localhost:8000/health

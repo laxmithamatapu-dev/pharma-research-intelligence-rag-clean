@@ -250,5 +250,15 @@ class IndexPathTests(unittest.TestCase):
         self.assertGreater(int(count), 0)
 
 
+class KeepAliveTests(unittest.TestCase):
+
+    def test_numeric_keep_alive_is_sent_as_integer(self):
+        self.assertEqual(QwenGenerator._parse_keep_alive("-1"), -1)
+        self.assertEqual(QwenGenerator._parse_keep_alive(" 300 "), 300)
+
+    def test_duration_keep_alive_is_unchanged(self):
+        self.assertEqual(QwenGenerator._parse_keep_alive("30m"), "30m")
+
+
 if __name__ == "__main__":
     unittest.main()

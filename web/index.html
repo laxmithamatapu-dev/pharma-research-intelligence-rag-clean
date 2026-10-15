@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pharma Research Assistant</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d232b; --muted: #5f6b7a; --border: #d9dee5;
+    --accent: #1f6feb; --accent-text: #ffffff; --warn-bg: #fff6e0; --warn-text: #7a5300;
+    --err-bg: #fde8e8; --err-text: #9b1c1c; --cite-bg: #e7efff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161c; --panel: #1b2129; --text: #e4e8ee; --muted: #9aa5b4; --border: #2d3540;
+      --accent: #4c8dff; --accent-text: #0b1220; --warn-bg: #3a2e10; --warn-text: #f3d28a;
+      --err-bg: #3d1717; --err-text: #f7b4b4; --cite-bg: #22324d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  #status { font-size: .85rem; color: var(--muted); }
+  #status.ok::before { content: "● "; color: #2ea043; }
+  #status.busy::before { content: "● "; color: #d29922; }
+  #status.down::before { content: "● "; color: #da3633; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  textarea { width: 100%; min-height: 96px; resize: vertical; padding: 10px 12px; font: inherit; color: var(--text);
+             background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  .hint { font-size: .85rem; color: var(--muted); }
+  button { font: inherit; font-weight: 600; padding: 8px 20px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-text); cursor: pointer; }
+  button:disabled { opacity: .55; cursor: default; }
+  #answer { overflow-wrap: anywhere; }
+  #answer h3 { font-size: 1.05rem; margin: 18px 0 6px; }
+  #answer h3:first-child { margin-top: 0; }
+  #answer p { margin: 0 0 10px; }
+  #answer ul { margin: 0 0 10px; padding-left: 22px; }
+  #answer li { margin-bottom: 6px; }
+  .cite { display: inline-block; padding: 0 5px; border-radius: 4px; background: var(--cite-bg); color: var(--accent); text-decoration: none; font-size: .85em; font-weight: 600; }
+  .notice { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .notice.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .notice.err { background: var(--err-bg); color: var(--err-text); }
+  h2 { font-size: 1rem; margin: 0 0 10px; }
+  ol#refs { margin: 0; padding-left: 0; list-style: none; }
+  ol#refs li { padding: 8px 0; border-top: 1px solid var(--border); }
+  ol#refs li:first-child { border-top: 0; }
+  ol#refs li:target { background: var(--cite-bg); }
+  .ref-id { font-weight: 700; margin-right: 6px; }
+  .ref-meta { font-size: .85rem; color: var(--muted); }
+  a { color: var(--accent); }
+  #timing { font-size: .85rem; color: var(--muted); margin-top: 12px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Pharma Research Assistant</h1>
+    <span id="status">Checking service…</span>
+  </header>
+
+  <form id="form" class="panel">
+    <label for="question" class="hint">Ask a question about the indexed research papers</label>
+    <textarea id="question" maxlength="2000" placeholder="e.g. What was the median progression-free survival with osimertinib in FLAURA?" required></textarea>
+    <div class="row">
+      <span class="hint" id="progress">Answers usually take 1.5–2 minutes. Ctrl+Enter to ask.</span>
+      <button id="ask" type="submit">Ask</button>
+    </div>
+  </form>
+
+  <section id="result" class="panel" hidden>
+    <div id="notice" class="notice" hidden></div>
+    <div id="answer"></div>
+    <div id="timing"></div>
+  </section>
+
+  <section id="references" class="panel" hidden>
+    <h2>Evidence</h2>
+    <ol id="refs"></ol>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let timer = null;
+
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderInline(text) {
+    return escapeHtml(text)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\[(E\d+)\]/g, '<a class="cite" href="#ref-$1">$1</a>');
+  }
+
+  function renderAnswer(text) {
+    const html = [];
+    let inList = false;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      const bullet = line.match(/^[-*•]\s+(.*)/);
+      if (bullet) {
+        if (!inList) { html.push("<ul>"); inList = true; }
+        html.push(`<li>${renderInline(bullet[1])}</li>`);
+        continue;
+      }
+      if (inList) { html.push("</ul>"); inList = false; }
+      const heading = line.match(/^#{1,6}\s+(.*)/);
+      if (heading) html.push(`<h3>${renderInline(heading[1])}</h3>`);
+      else if (line) html.push(`<p>${renderInline(line)}</p>`);
+    }
+    if (inList) html.push("</ul>");
+    return html.join("");
+  }
+
+  async function refreshStatus() {
+    try {
+      const response = await fetch("/health");
+      const health = await response.json();
+      $("status").className = health.busy ? "busy" : "ok";
+      $("status").textContent = health.busy ? `Busy answering · ${health.model}` : `Ready · ${health.model}`;
+    } catch (error) {
+      $("status").className = "down";
+      $("status").textContent = "Service not reachable";
+    }
+  }
+
+  function showReferences(references) {
+    const list = $("refs");
+    list.innerHTML = "";
+    for (const ref of references || []) {
+      const item = document.createElement("li");
+      item.id = `ref-${ref.evidence_id}`;
+      const title = escapeHtml(ref.paper_title || "Untitled paper");
+      const pmcid = ref.pmcid ? escapeHtml(ref.pmcid) : "";
+      const link = pmcid ? ` · <a href="https://pmc.ncbi.nlm.nih.gov/articles/${pmcid}/" target="_blank" rel="noopener">${pmcid}</a>` : "";
+      const section = ref.section_path ? escapeHtml(String(ref.section_path)) : "";
+      item.innerHTML = `<span class="ref-id">${escapeHtml(ref.evidence_id)}</span>${title}<div class="ref-meta">${section}${link}</div>`;
+      list.appendChild(item);
+    }
+    $("references").hidden = list.children.length === 0;
+  }
+
+  function showNotice(kind, text) {
+    $("notice").className = `notice ${kind}`;
+    $("notice").textContent = text;
+    $("notice").hidden = false;
+  }
+
+  async function ask(event) {
+    event.preventDefault();
+    const question = $("question").value.trim();
+    if (!question) return;
+
+    $("ask").disabled = true;
+    $("result").hidden = true;
+    $("references").hidden = true;
+    $("notice").hidden = true;
+    const started = Date.now();
+    timer = setInterval(() => {
+      $("progress").textContent = `Working… ${Math.round((Date.now() - started) / 1000)} s`;
+    }, 1000);
+    refreshStatus();
+
+    try {
+      const response = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      const result = await response.json();
+      $("result").hidden = false;
+      if (result.error) {
+        showNotice("err", `The answer could not be produced: ${result.error}`);
+        $("answer").innerHTML = "";
+      } else {
+        if (result.abstained) {
+          showNotice("warn", "The indexed papers do not contain enough evidence to answer this question.");
+        }
+        $("answer").innerHTML = renderAnswer(result.answer || "");
+      }
+      const seconds = result.metrics_seconds || {};
+      $("timing").textContent = seconds.total ? `Answered in ${Math.round(seconds.total)} s` : "";
+      showReferences(result.references);
+    } catch (error) {
+      $("result").hidden = false;
+      $("answer").innerHTML = "";
+      showNotice("err", "Could not reach the service. Check that pharma-rag is running.");
+    } finally {
+      clearInterval(timer);
+      $("progress").textContent = "Answers usually take 1.5–2 minutes. Ctrl+Enter to ask.";
+      $("ask").disabled = false;
+      refreshStatus();
+    }
+  }
+
+  $("form").addEventListener("submit", ask);
+  $("question").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) $("form").requestSubmit();
+  });
+  refreshStatus();
+  setInterval(refreshStatus, 15000);
+</script>
+</body>
+</html>
