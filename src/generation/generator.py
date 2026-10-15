@@ -441,7 +441,10 @@ ANSWER:
             f"\nPrompt Length: "
             f"{len(prompt)} characters"
         )
-
+        print(
+            f"Prompt Words: "
+            f"{len(prompt.split())}"
+        )
         start = time.time()
 
         result = subprocess.run(
@@ -467,6 +470,15 @@ ANSWER:
             )
 
         answer = self.normalize_answer(result.stdout)
+        print(
+            f"\nAnswer Characters: "
+            f"{len(answer)}"
+        )
+
+        print(
+            f"Answer Words: "
+            f"{len(answer.split())}"
+        )
         validation_errors = self.validate_answer(answer, context)
 
         if validation_errors:
