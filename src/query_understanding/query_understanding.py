@@ -642,7 +642,8 @@ class QueryUnderstanding:
             combined = {
                 name: (1.0 - weight) * lexical.get(name, 0.0)
                 + weight * semantic.get(name, 0.0)
-                for name in set(lexical) | set(semantic)
+                for name in self._compiled_taxonomy
+                if name in lexical or name in semantic
             }
             ranked = sorted(
                 ((n, s) for n, s in combined.items() if s >= self.MIN_TYPE_SCORE),
