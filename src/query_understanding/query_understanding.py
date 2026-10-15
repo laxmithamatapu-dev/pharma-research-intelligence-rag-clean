@@ -1,10 +1,11 @@
 import json
 import math  # NEW
+import os
 import re
-import subprocess
 import unicodedata
 from typing import Any, Callable, Dict, List, Optional, Tuple  # CHANGED: added Callable, Optional, Tuple
 
+import requests
 from json_repair import repair_json
 
 try:
@@ -190,6 +191,7 @@ class QueryUnderstanding:
 
     # Below this confidence the question is sent to the LLM fallback.
     LLM_FALLBACK_CONFIDENCE = 0.5
+    LLM_OPTIONS = {"temperature": 0, "seed": 0}
     # Raw weighted score at which a taxonomy score reaches ~0.63.
     TAXONOMY_SATURATION = 3.0
     # A type scoring below this is treated as "not detected".
@@ -447,6 +449,13 @@ class QueryUnderstanding:
             print(value)
         else:
             print(json.dumps(value, indent=2, ensure_ascii=False, default=str))
+
+    @staticmethod
+    def _ollama_generate_url() -> str:
+        host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434").strip()
+        if not host.startswith(("http://", "https://")):
+            host = f"http://{host}"
+        return f"{host.rstrip('/')}/api/generate"
 
     def __init__(
         self,
@@ -1406,39 +1415,28 @@ Return ONLY:
         )
 
         try:
-            result = subprocess.run(
-                [
-                    "ollama",
-                    "run",
-                    self.model_name
-                ],
-                input=prompt,
-                text=True,
-                capture_output=True,
-                check=False,
-                timeout=self.llm_timeout,  # NEW: never hang the request
+            http_response = requests.post(
+                self._ollama_generate_url(),
+                json={
+                    "model": self.model_name,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": dict(self.LLM_OPTIONS),
+                },
+                timeout=self.llm_timeout,
             )
-        except (OSError, subprocess.TimeoutExpired) as error:  # CHANGED: + timeout
+            http_response.raise_for_status()
+            raw_output = http_response.json().get("response", "")
+        except (requests.RequestException, ValueError) as error:
 
             print(
                 f"\nQuery Understanding Error: {error}"
             )
             return return_fallback()
 
-        self._debug_stage("RAW OLLAMA OUTPUT", result.stdout)
-        if result.returncode != 0:
+        self._debug_stage("RAW OLLAMA OUTPUT", raw_output)
 
-            print(
-                "\nQuery Understanding Error:"
-            )
-
-            print(
-                result.stderr
-            )
-
-            return return_fallback()
-
-        response = result.stdout.strip()
+        response = raw_output.strip()
 
         try:
             parsed_result = self.extract_json(response)

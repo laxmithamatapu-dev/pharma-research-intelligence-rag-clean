@@ -238,6 +238,7 @@ class BenchmarkHarness:
         return item["definition"]["question"]
 
     def install(self, app_module):
+        import requests
         import retrieval.retriever as retriever
         from generation.generator import QwenGenerator
         from query_understanding.query_understanding import QueryUnderstanding
@@ -258,6 +259,7 @@ class BenchmarkHarness:
             "generate": QwenGenerator.generate,
             "validate_answer": QwenGenerator.validate_answer,
             "subprocess_run": subprocess.run,
+            "requests_post": requests.post,
         }
         originals = self.originals
 
@@ -283,9 +285,13 @@ class BenchmarkHarness:
             record = harness.current["query_understanding"]
             record["seconds"] = time.perf_counter() - started
             record["query_info"] = json.loads(json.dumps(query_info, default=str))
+            fast_path = record.get("fast_path") or {}
             record["llm_fallback"] = any(
                 call["stage"] == "query_understanding"
                 for call in harness.current["ollama_calls"]
+            ) or (
+                fast_path.get("confidence") is not None
+                and fast_path["confidence"] < fast_path.get("threshold", 0)
             )
             return query_info
 
@@ -437,6 +443,45 @@ class BenchmarkHarness:
             call["ollama_rss_kb"] = sample_ollama_rss_kb()
             return result
 
+        def requests_post(url, *post_args, **post_kwargs):
+            if "/api/generate" not in str(url):
+                return originals["requests_post"](url, *post_args, **post_kwargs)
+            payload = post_kwargs.get("json") or {}
+            call = {
+                "stage": harness.stage,
+                "model": payload.get("model"),
+                "command": ["POST", str(url)],
+                "options": payload.get("options"),
+                "prompt": payload.get("prompt") or "",
+                "prompt_chars": len(payload.get("prompt") or ""),
+            }
+            if harness.current is not None:
+                harness.current["ollama_calls"].append(call)
+            started = time.perf_counter()
+            try:
+                response = originals["requests_post"](url, *post_args, **post_kwargs)
+            except Exception as exc:
+                call["error"] = f"{type(exc).__name__}: {exc}"
+                call["wall_seconds"] = time.perf_counter() - started
+                raise
+            call["wall_seconds"] = time.perf_counter() - started
+            call["returncode"] = response.status_code
+            try:
+                body = response.json()
+            except ValueError:
+                body = {}
+            call["stdout"] = body.get("response")
+            call["stats"] = {
+                "total_duration_seconds": (body.get("total_duration") or 0) / 1e9,
+                "load_duration_seconds": (body.get("load_duration") or 0) / 1e9,
+                "prompt_eval_count": body.get("prompt_eval_count"),
+                "prompt_eval_duration_seconds": (body.get("prompt_eval_duration") or 0) / 1e9,
+                "eval_count": body.get("eval_count"),
+                "eval_duration_seconds": (body.get("eval_duration") or 0) / 1e9,
+            }
+            call["ollama_rss_kb"] = sample_ollama_rss_kb()
+            return response
+
         builtins.input = self.next_input
         QueryUnderstanding._classify_without_llm = classify
         QueryUnderstanding.analyze = analyze
@@ -449,6 +494,7 @@ class BenchmarkHarness:
         QwenGenerator.generate = generate
         QwenGenerator.validate_answer = validate_answer
         subprocess.run = subprocess_run
+        requests.post = requests_post
 
     def run(self, app_module, log_path):
         with open(log_path, "w", encoding="utf-8") as log, contextlib.redirect_stdout(log):
@@ -524,3 +570,6 @@ class BenchmarkHarness:
         QwenGenerator.generate = originals["generate"]
         QwenGenerator.validate_answer = originals["validate_answer"]
         subprocess.run = originals["subprocess_run"]
+        import requests
+
+        requests.post = originals["requests_post"]
