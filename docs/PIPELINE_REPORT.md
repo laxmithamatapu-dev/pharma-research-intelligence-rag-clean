@@ -49,7 +49,8 @@ Rollback: RETRIEVAL_MODE=legacy
 
 | | Value |
 |---|---|
-| **Generated answers (40)**: end-to-end median / p90 / max | **119 s / 153 s / 225 s** |
+| **Generated answers (40)**: end-to-end median / p90 / max | **119 s / 153 s / 225 s** (4 threads) |
+| After switching Ollama to 8 threads (13 answers, generation only) | median 87 s, p90 111 s |
 | Out-of-corpus abstentions (9): end-to-end median | **3.8 s** |
 | Query understanding | ≈ 0 s (rule path); 4–11 s when the small fallback model is used |
 | Retrieval + reranking: median / p90 | 5.4 s / 11.3 s |
@@ -97,6 +98,6 @@ Rollback: RETRIEVAL_MODE=legacy
 - 56 automated tests (`python -m unittest …`, see OPERATIONS.md).
 
 ## 7. Recommended next work (by expected effect on correct answers)
-1. **Generation fidelity**: measure and reduce dropped numbers and uncited bullets (≈ 25 % of visible facts not stated); evaluate on stored outputs first.
+1. **Generation fidelity**: ≈ 25 % of visible facts are not stated, mostly secondary statistics beside correct main findings. An "exact numbers" prompt rule was A/B-tested on 13 questions (+1 of 42 facts, within noise) and not adopted; further gains likely need a stronger model or answer-structure changes, which should be evaluated on stored evidence first.
 2. **Coverage of the remaining L1 misses**: passage truncation (N1) and within-paper ranking (N4, L1-09) — only if a measured change improves held-out results without a large prompt increase.
 3. **Operational**: free disk (unused 419 MB cross-encoder, old benchmark runs) before corpus growth; schedule index rebuilds with backup space.

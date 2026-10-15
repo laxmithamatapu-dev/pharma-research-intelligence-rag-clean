@@ -152,3 +152,19 @@ Known residuals: keyword design labels remain approximate (some narrative review
 - Why decode is slow (calculation): every generated token reads the full 4.25 GB of quantized weights; 6.3 tokens/s × 4.25 GB ≈ 27 GB/s, i.e. decode is limited by memory bandwidth on this CPU, not by the code. Prefill processes the prompt in parallel batches and is about 10× faster per token.
 - Paper-first costs ≈ +1,300 prompt tokens (+25 s prefill) for ≈ 2× the expected facts in answers.
 - Model load: 0–8 s when warm; up to 119 s for the first request after a VM reboot (weights read from disk).
+
+## Post-baseline measurements (2026-10-15)
+
+**Ollama thread count** (same 3,850-token prompt, cache-busted, 2–3 runs per setting): 4 threads (Ollama default) prefill 54.9 / decode 5.81 tokens/s; 6 threads not better; **8 threads 68.5 / 6.88 tokens/s**. Adopted as default (`OLLAMA_NUM_THREAD`, CPU count). In the A/B run below, generation median fell to **87 s** (p90 111 s) from 119 s end-to-end in the 4-thread final baseline.
+
+**Exact-numbers prompt rule — not adopted.** A/B on identical evidence, 13 questions (10 with dropped facts in the final baseline + 3 guards), `benchmark_runs/20261015_133652_numeric_fidelity`:
+| | Baseline prompt | + exact-numbers rule |
+|---|---|---|
+| Expected facts stated (42) | 31 | 32 |
+| Numbers not found verbatim in evidence | 6 (all L1-04) | 0 |
+| Failures | 0 | 0 |
+| Generation median / p90 | 87 / 111 s | 87 / 111 s |
+
+- The 6 "unsupported" numbers were correct derived values (e.g. 367.0 − 75.1 = 291.9 kcal); the rule removed the arithmetic, not an error.
+- +1 fact is within noise. Remaining misses are secondary statistics next to correctly stated main findings (cohort size, AUC, secondary HRs), plus L1-09 whose facts are not retrieved.
+- Conclusion: prompt wording is not an effective lever for the remaining gap; no change made.
