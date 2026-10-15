@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import time
 from datetime import datetime
@@ -15,12 +16,18 @@ from query_understanding.query_understanding import (
 )
 
 from retrieval.retrieval_strategy import (
-    StrategyManager
+    StrategyManager,
+    plan_for
 )
 
 from retrieval.retriever import (
-    retrieve_chunks
+    retrieve_chunks,
+    retrieve_evidence
 )
+
+RETRIEVAL_MODES = ("legacy", "paper_first")
+
+RETRIEVAL_MODE = os.environ.get("RETRIEVAL_MODE", "legacy")
 
 from generation.context_builder import (
     build_context
@@ -71,9 +78,15 @@ def save_debug_run(
 
 def main():
 
+    if RETRIEVAL_MODE not in RETRIEVAL_MODES:
+        raise SystemExit(
+            f"RETRIEVAL_MODE must be one of {', '.join(RETRIEVAL_MODES)}; got {RETRIEVAL_MODE!r}"
+        )
+
     print("\n" + "=" * 80)
     print("PHARMA RESEARCH INTELLIGENCE ASSISTANT")
     print("=" * 80)
+    print(f"Retrieval mode: {RETRIEVAL_MODE}")
 
     generator = QwenGenerator()
 
@@ -163,11 +176,14 @@ def main():
                 )
             )
 
-            strategy = (
-                strategy_manager.get_strategy(
-                    intent_info
+            if RETRIEVAL_MODE == "paper_first":
+                strategy = plan_for(query_info)
+            else:
+                strategy = (
+                    strategy_manager.get_strategy(
+                        intent_info
+                    )
                 )
-            )
 
             print("\n" + "=" * 80)
             print("RETRIEVAL STRATEGY")
@@ -183,11 +199,19 @@ def main():
 
             start = time.perf_counter()
 
-            chunks = retrieve_chunks(
-                question=question,
-                query_info=query_info,
-                strategy=strategy,
-            )
+            if RETRIEVAL_MODE == "paper_first":
+                evidence = retrieve_evidence(
+                    question=question,
+                    query_info=query_info,
+                    plan=strategy,
+                )
+                chunks = evidence.chunks
+            else:
+                chunks = retrieve_chunks(
+                    question=question,
+                    query_info=query_info,
+                    strategy=strategy,
+                )
             metrics["retrieval"] = time.perf_counter() - start
 
             print("\n" + "=" * 80)

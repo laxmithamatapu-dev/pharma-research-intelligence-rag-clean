@@ -430,6 +430,19 @@ class QueryUnderstanding:
         ("FACT_LOOKUP", r"^(?:what|which|who|when|where|list|name|is|are|does|do)\b"),
     )
 
+    SINGLE_STUDY_PATTERNS = (
+        re.compile(
+            r"\b(?:in|of|from|for) (?:the|this) [^?]{0,80}?\b"
+            r"(?:cohort|trial|study|analysis|case report|case|registry|model|participants|subgroup)\b",
+            re.IGNORECASE,
+        ),
+        re.compile(r"\bthe [^?.]{0,60}?\bpatient\b", re.IGNORECASE),
+        re.compile(r"\bcase report\b", re.IGNORECASE),
+        re.compile(r"\b[A-Z]{4,}-\d+[A-Z]?\b"),
+        re.compile(r"\b[A-Z][a-z]+[A-Z][a-z]+ \d+[A-Z]*\b"),
+        re.compile(r"\bNCT\d{8}\b"),
+    )
+
     INTENT_TO_ANSWER_TYPE = {
         "EXPLANATION": "EXPLANATORY",
         "COMPARISON": "COMPARATIVE",
@@ -1241,6 +1254,12 @@ Return ONLY:
             override_reason = "matched deterministic drug-overview question pattern"
         print(f"Override reason: {override_reason or 'none'}")
 
+        validated_result["scope"] = self._detect_scope(
+            question,
+            validated_result["intent"],
+            validated_result["question_type"],
+        )
+
         grounded_retrieval_hints = self._build_grounded_retrieval_hints(
             validated_result["question_type"],
             entities["DRUG"],
@@ -1296,6 +1315,15 @@ Return ONLY:
         )
 
         return validated_result
+
+    @classmethod
+    def _detect_scope(cls, question: str, intent: str, question_type: str) -> str:
+        """Return single_study, comparison, or unspecified from explicit wording only."""
+        if any(pattern.search(question or "") for pattern in cls.SINGLE_STUDY_PATTERNS):
+            return "single_study"
+        if intent == "COMPARISON" or question_type == "COMPARATIVE_EFFECTIVENESS":
+            return "comparison"
+        return "unspecified"
 
     @classmethod
     def _is_mechanism_question(cls, question: str) -> bool:

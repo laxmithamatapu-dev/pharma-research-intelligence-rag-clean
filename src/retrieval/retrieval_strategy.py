@@ -9,6 +9,54 @@ class RetrievalStrategy:
     evidence_depth: str
 
 
+PLAN_SHAPES = {
+    "depth": (4, 4),
+    "breadth": (1, 1, 1, 1, 1, 1, 1, 1),
+    "hedged": (4, 1, 1, 1, 1),
+    "comparison": (2, 2, 1, 1, 1, 1),
+}
+
+SCOPE_SHAPES = {
+    "single_study": "depth",
+}
+
+DEFAULT_ADAPTIVE_MARGIN = 2.0
+
+
+@dataclass(frozen=True)
+class RetrievalPlan:
+    """Paper-first evidence budget: passages to take from each ranked paper."""
+
+    scope: str
+    shape: str
+    allocation: tuple
+    paper_candidates: int = 30
+    passage_candidates: int = 60
+    passages_considered_per_paper: int = 20
+    adaptive_margin: float | None = None
+
+    @property
+    def max_passages(self) -> int:
+        return sum(self.allocation)
+
+
+def plan_for(
+    query_info: dict | None,
+    unspecified_shape: str = "adaptive",
+    adaptive_margin: float | None = DEFAULT_ADAPTIVE_MARGIN,
+) -> RetrievalPlan:
+    scope = (query_info or {}).get("scope") or "unspecified"
+    shape = SCOPE_SHAPES.get(scope, unspecified_shape)
+    if shape not in PLAN_SHAPES and shape != "adaptive":
+        raise ValueError(f"Unknown plan shape: {shape}")
+    return RetrievalPlan(
+        scope=scope,
+        shape=shape,
+        allocation=PLAN_SHAPES.get(shape, PLAN_SHAPES["breadth"]),
+        adaptive_margin=adaptive_margin if shape == "adaptive" else None,
+    )
+
+
 class StrategyManager:
     """Return the retrieval settings tuned to the inferred intent."""
 

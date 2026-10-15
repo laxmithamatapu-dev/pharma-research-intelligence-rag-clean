@@ -74,6 +74,26 @@ def mean_pooling(last_hidden_state, attention_mask):
     return summed / counts
 
 
+def embed_paper_query(text: str):
+    """
+    Encode a question for the paper index (CLS pooling, max_length 64, as documented for MedCPT).
+    """
+
+    inputs = query_tokenizer(
+        text,
+        return_tensors="pt",
+        truncation=True,
+        max_length=64,
+        padding=True
+    )
+
+    with torch.no_grad():
+
+        outputs = query_model(**inputs)
+
+    return outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
+
+
 def embed_query(text: str):
     """
     Encode user question.

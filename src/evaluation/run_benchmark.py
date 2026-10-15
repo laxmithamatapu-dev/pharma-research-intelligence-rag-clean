@@ -232,6 +232,7 @@ def main(argv=None):
         "no_expansions": args.no_expansions,
         "ollama_verbose": not args.no_ollama_verbose,
         "questions_file": str(args.questions),
+        "retrieval_mode": os.environ.get("RETRIEVAL_MODE", "legacy"),
     }
 
     print("[benchmark] loading app (models, Chroma)", file=sys.stderr, flush=True)

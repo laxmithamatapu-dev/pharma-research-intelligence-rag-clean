@@ -256,6 +256,7 @@ class BenchmarkHarness:
             "rerank_chunks": retriever.rerank_chunks,
             "build_context": app_module.build_context,
             "save_debug_run": app_module.save_debug_run,
+            "retrieve_evidence": getattr(app_module, "retrieve_evidence", None),
             "generate": QwenGenerator.generate,
             "validate_answer": QwenGenerator.validate_answer,
             "subprocess_run": subprocess.run,
@@ -379,6 +380,28 @@ class BenchmarkHarness:
             }
             return context, evidence_map
 
+        def retrieve_evidence(*args, **kwargs):
+            started = time.perf_counter()
+            evidence = originals["retrieve_evidence"](*args, **kwargs)
+            telemetry = dict(evidence.telemetry)
+            considered = telemetry.pop("considered_chunk_ids", [])
+            harness.current["strategy"] = {
+                "produced": dataclasses.asdict(evidence.plan),
+                "used": {**dataclasses.asdict(evidence.plan), "allocation": list(evidence.allocation)},
+                "overridden": False,
+            }
+            harness.current["paper_first"] = telemetry
+            harness.current["rerank"] = {
+                "seconds": time.perf_counter() - started,
+                "query": kwargs.get("question"),
+                "top_k": len(evidence.chunks),
+                "question_type": (kwargs.get("query_info") or {}).get("question_type"),
+                "diversity_boost": None,
+                "pool": [{"chunk_id": chunk_id, "pmcid": chunk_id.rsplit("_", 1)[0]} for chunk_id in considered],
+                "final": [_score_view(chunk) for chunk in evidence.chunks],
+            }
+            return evidence
+
         def save_debug_run(question, query_info, strategy, chunks, evidence_map, answer, metrics):
             harness.current["app_metrics"] = dict(metrics)
             harness.current["answer"] = answer
@@ -491,6 +514,8 @@ class BenchmarkHarness:
         retriever.rerank_chunks = rerank_chunks
         app_module.build_context = build_context
         app_module.save_debug_run = save_debug_run
+        if originals["retrieve_evidence"] is not None:
+            app_module.retrieve_evidence = retrieve_evidence
         QwenGenerator.generate = generate
         QwenGenerator.validate_answer = validate_answer
         subprocess.run = subprocess_run
@@ -567,6 +592,8 @@ class BenchmarkHarness:
         self.retriever.rerank_chunks = originals["rerank_chunks"]
         app_module.build_context = originals["build_context"]
         app_module.save_debug_run = originals["save_debug_run"]
+        if originals.get("retrieve_evidence") is not None:
+            app_module.retrieve_evidence = originals["retrieve_evidence"]
         QwenGenerator.generate = originals["generate"]
         QwenGenerator.validate_answer = originals["validate_answer"]
         subprocess.run = originals["subprocess_run"]
