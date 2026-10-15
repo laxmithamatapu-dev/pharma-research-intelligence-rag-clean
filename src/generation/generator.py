@@ -7,6 +7,19 @@ from typing import Any
 import requests
 
 
+AUTHOR_NAME = r"[A-Z][A-Za-z'-]+(?:\s+(?:and|&)\s+[A-Z][A-Za-z'-]+)?\s+et\s+al\.?(?:\s*\(\s*\d{4}[a-z]?\s*\))?"
+
+LEAD_ATTRIBUTION_PATTERN = re.compile(
+    rf"\b(?:according to|as (?:reported|described|shown|noted) by)\s+(?:the study by\s+)?{AUTHOR_NAME}\s*,?\s*",
+    flags=re.IGNORECASE,
+)
+
+BY_AUTHOR_PATTERN = re.compile(rf"\s+by\s+{AUTHOR_NAME}")
+
+AUTHOR_PATTERN = re.compile(rf"\b{AUTHOR_NAME}")
+
+SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=\S)")
+
 NON_EVIDENCE_CITATION_PATTERN = re.compile(
     r"\b(?:doi|pmid|pmcid)\b|"
     r"\b[A-Z][A-Za-z'-]+\s+et\s+al\.?|"
@@ -387,6 +400,44 @@ ANSWER:
         statement = re.sub(r"^[\s>*\-•]+|[\s.*]+$", "", line).casefold()
         return statement == cls.ABSTENTION_STATEMENT
 
+    @staticmethod
+    def _strip_author_attributions(answer: str) -> str:
+        """Remove invented author attributions while keeping the claim and its [E#] citations."""
+
+        lines = []
+        for line in answer.splitlines():
+            stripped = LEAD_ATTRIBUTION_PATTERN.sub(
+                lambda match: "In " if line[match.end():match.end() + 1] == "[" else "",
+                line,
+            )
+            stripped = BY_AUTHOR_PATTERN.sub("", stripped)
+            stripped = AUTHOR_PATTERN.sub("the study", stripped)
+            stripped = re.sub(
+                r"(^\s*(?:[-*]\s*)?(?:\*\*[^*]+\*\*:\s*)?)([a-z])",
+                lambda match: match.group(1) + match.group(2).upper(),
+                stripped,
+            ) if stripped != line else stripped
+            lines.append(stripped)
+        return "\n".join(lines)
+
+    def _drop_offending_sentences(self, answer: str, context: str) -> str:
+        """Drop only the sentences that fail validation; keep the rest of the answer."""
+        kept_lines = []
+        in_references = False
+        for line in answer.splitlines():
+            if re.match(r"^\s*##\s+References\s*$", line, re.IGNORECASE):
+                in_references = True
+            if in_references or not line.strip() or line.lstrip().startswith("#"):
+                kept_lines.append(line)
+                continue
+            marker = re.match(r"^\s*(?:[-*]|\d+[.)])\s+", line)
+            prefix = marker.group(0) if marker else ""
+            sentences = SENTENCE_BOUNDARY.split(line[len(prefix):])
+            kept = [sentence for sentence in sentences if not self.validate_answer(sentence, context)]
+            if kept:
+                kept_lines.append(prefix + " ".join(kept))
+        return "\n".join(kept_lines)
+
     def _retain_cited_claims(
         self,
         answer: str,
@@ -526,7 +577,12 @@ ANSWER:
             f"Answer Words: "
             f"{len(answer.split())}"
         )
+        answer = self._strip_author_attributions(answer)
         validation_errors = self.validate_answer(answer, context)
+
+        if validation_errors:
+            answer = self.normalize_answer(self._drop_offending_sentences(answer, context))
+            validation_errors = self.validate_answer(answer, context)
 
         if validation_errors:
             answer = self._retain_cited_claims(answer, context)

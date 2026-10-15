@@ -21,17 +21,20 @@ def load_generator(source, name):
         return module.QwenGenerator()
 
 
-def postprocess(generator, raw, context):
+def postprocess(generator, raw, context, definition=None):
     answer = generator.normalize_answer(raw)
+    if hasattr(generator, "_strip_author_attributions"):
+        answer = generator._strip_author_attributions(answer)
     first_errors = generator.validate_answer(answer, context)
-    pruned = False
-    if first_errors:
-        pruned = True
+    final_errors = first_errors
+    if final_errors and hasattr(generator, "_drop_offending_sentences"):
+        answer = generator.normalize_answer(generator._drop_offending_sentences(answer, context))
+        final_errors = generator.validate_answer(answer, context)
+    if final_errors:
         answer = generator.normalize_answer(generator._retain_cited_claims(answer, context))
         final_errors = generator.validate_answer(answer, context)
-    else:
-        final_errors = []
-    outcome = "fail" if final_errors or not answer else ("pass_after_prune" if pruned else "pass_first")
+    pruned = bool(first_errors)
+    outcome = "fail" if final_errors or not answer else ("pass_after_repair" if pruned else "pass_first")
     body_lines = []
     for line in answer.splitlines():
         if re.match(r"^\s*#+\s*references\s*$", line, re.IGNORECASE):
@@ -47,6 +50,10 @@ def postprocess(generator, raw, context):
             if "not established in the supplied evidence" in line.casefold()
         ),
         "answer_chars": len(answer),
+        "facts_in_answer": (
+            sum(1 for fact in definition.get("facts", []) if re.search(fact["pattern"], answer if outcome != "fail" else "", re.IGNORECASE))
+            if definition else None
+        ),
     }
 
 
@@ -63,6 +70,10 @@ def main(argv=None):
     new_source = (PROJECT_ROOT / "src" / "generation" / "generator.py").read_text(encoding="utf-8")
     old_generator = load_generator(old_source, "generator_old")
     new_generator = load_generator(new_source, "generator_new")
+    definitions = {
+        item["id"]: item
+        for item in json.loads((PROJECT_ROOT / "src" / "evaluation" / "benchmark_questions.json").read_text())["questions"]
+    }
 
     rows = []
     for path in sorted(glob.glob(str(PROJECT_ROOT / args.runs / "records" / "*.json"))):
@@ -75,8 +86,8 @@ def main(argv=None):
         rows.append({
             "run": Path(path).parents[1].name,
             "record": Path(path).stem,
-            "old": postprocess(old_generator, raw, context),
-            "new": postprocess(new_generator, raw, context),
+            "old": postprocess(old_generator, raw, context, definitions.get(record["id"])),
+            "new": postprocess(new_generator, raw, context, definitions.get(record["id"])),
         })
 
     summary = {}
@@ -85,6 +96,7 @@ def main(argv=None):
             "outcomes": {},
             "citation_only_lines": sum(row[side]["citation_only_lines"] for row in rows),
             "abstention_lines": sum(row[side]["abstention_lines"] for row in rows),
+            "facts_in_answers": sum(row[side]["facts_in_answer"] or 0 for row in rows),
             "forbidden_phrase_errors": sum(
                 1 for row in rows for error in row[side]["first_errors"] if error.startswith("forbidden phrase")
             ),

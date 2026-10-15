@@ -77,6 +77,61 @@ class PruningTests(unittest.TestCase):
         self.assertNotIn(line, pruned)
 
 
+class AnswerRepairTests(unittest.TestCase):
+
+    def setUp(self):
+        self.generator = make_generator()
+
+    def test_invented_author_attribution_is_removed_and_citation_kept(self):
+        line = "- **ADA_ab Levels**: According to Huang et al. [E2], ADA_ab levels were higher with LOR."
+        repaired = self.generator._strip_author_attributions(line)
+        self.assertEqual(repaired, "- **ADA_ab Levels**: In [E2], ADA_ab levels were higher with LOR.")
+        self.assertEqual(self.generator.validate_answer(repaired, CONTEXT), [])
+
+    def test_other_author_forms_are_removed(self):
+        self.assertEqual(
+            self.generator._strip_author_attributions("The study by Huang et al. [E2] also found ERA."),
+            "The study [E2] also found ERA.",
+        )
+        self.assertEqual(
+            self.generator._strip_author_attributions("Smith et al. (2021) reported a PFS of 18.2 months [E1]."),
+            "The study reported a PFS of 18.2 months [E1].",
+        )
+
+    def test_text_without_authors_is_unchanged(self):
+        line = "Baseline KL-6 levels predicted liver injury [E1]."
+        self.assertEqual(self.generator._strip_author_attributions(line), line)
+
+    def test_only_offending_sentence_is_dropped(self):
+        answer = "\n".join([
+            "## Key Findings",
+            "- Histologic transformation occurred in 4.9% of patients.",
+            "- Deteriorating patients were less likely to undergo rebiopsy. Transformation included HGNEC [E1].",
+            "## References",
+            "[E1]",
+        ])
+        repaired = self.generator._drop_offending_sentences(answer, CONTEXT)
+        self.assertIn("- Histologic transformation occurred in 4.9% of patients.", repaired)
+        self.assertIn("- Transformation included HGNEC [E1].", repaired)
+        self.assertNotIn("likely", repaired)
+
+    def test_generate_repairs_instead_of_pruning_uncited_content(self):
+        raw = "\n".join([
+            "## Key Findings",
+            "- Histologic transformation occurred in 4.9% of patients.",
+            "- Deteriorating patients were less likely to undergo rebiopsy.",
+            "- C797S was detected [E1].",
+        ])
+        response = mock.Mock(status_code=200, text="")
+        response.json.return_value = {"message": {"content": raw}}
+        with mock.patch("generation.generator.requests.post", return_value=response), \
+                contextlib.redirect_stdout(io.StringIO()):
+            answer = self.generator.generate("What alterations?", CONTEXT, {})
+        self.assertIn("4.9% of patients", answer)
+        self.assertIn("C797S was detected [E1].", answer)
+        self.assertNotIn("likely", answer)
+
+
 class OllamaInvocationTests(unittest.TestCase):
 
     def chat_response(self, content, status=200):
