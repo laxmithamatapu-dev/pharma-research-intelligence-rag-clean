@@ -10,7 +10,7 @@ class RetrievalStrategy:
 
 
 PLAN_SHAPES = {
-    "depth": (4, 4),
+    "depth": (6, 2),
     "breadth": (1, 1, 1, 1, 1, 1, 1, 1),
     "hedged": (4, 1, 1, 1, 1),
     "comparison": (2, 2, 1, 1, 1, 1),
@@ -21,6 +21,8 @@ SCOPE_SHAPES = {
 }
 
 DEFAULT_ADAPTIVE_MARGIN = 2.0
+
+DEFAULT_PAPER_FLOOR = 3.5
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,7 @@ class RetrievalPlan:
     passage_candidates: int = 60
     passages_considered_per_paper: int = 20
     adaptive_margin: float | None = None
+    paper_floor: float | None = DEFAULT_PAPER_FLOOR
 
     @property
     def max_passages(self) -> int:

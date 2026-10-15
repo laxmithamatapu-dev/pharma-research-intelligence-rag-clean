@@ -391,6 +391,7 @@ class BenchmarkHarness:
                 "overridden": False,
             }
             harness.current["paper_first"] = telemetry
+            harness.current["abstained"] = evidence.abstained
             harness.current["rerank"] = {
                 "seconds": time.perf_counter() - started,
                 "query": kwargs.get("question"),
@@ -402,9 +403,10 @@ class BenchmarkHarness:
             }
             return evidence
 
-        def save_debug_run(question, query_info, strategy, chunks, evidence_map, answer, metrics):
+        def save_debug_run(question, query_info, strategy, chunks, evidence_map, answer, metrics, error=None, telemetry=None):
             harness.current["app_metrics"] = dict(metrics)
             harness.current["answer"] = answer
+            harness.current["app_error"] = error
             return harness._record_path(harness.current)
 
         def generate(self_, question, context, query_info=None):

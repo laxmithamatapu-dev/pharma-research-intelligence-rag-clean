@@ -1118,6 +1118,625 @@
           ]
         }
       ]
+    },
+    {
+      "id": "N1",
+      "level": 1,
+      "category": "pharmacokinetics",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Does co-administration with savolitinib alter osimertinib exposure?",
+      "gold_pmcs": [
+        "PMC13504015"
+      ],
+      "gold_chunks": {
+        "PMC13504015_0012": 2
+      },
+      "facts": [
+        {
+          "id": "osimertinib_unaltered",
+          "description": "Osimertinib exposure not altered by savolitinib",
+          "pattern": "osimertinib exposures? (?:were|was) not altered|not altered by co.?administration",
+          "evidence_chunks": [
+            "PMC13504015_0012"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N2",
+      "level": 1,
+      "category": "safety",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Is the risk of serious infection different between infliximab and adalimumab in children with inflammatory bowel disease?",
+      "gold_pmcs": [
+        "PMC13355144"
+      ],
+      "gold_chunks": {
+        "PMC13355144_0013": 2
+      },
+      "facts": [
+        {
+          "id": "pooled_hr",
+          "description": "Pooled HR 1.15",
+          "pattern": "1\\.15",
+          "evidence_chunks": [
+            "PMC13355144_0013"
+          ]
+        },
+        {
+          "id": "ci",
+          "description": "95% CI 0.63-2.11",
+          "pattern": "2\\.11",
+          "evidence_chunks": [
+            "PMC13355144_0013"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N3",
+      "level": 1,
+      "category": "biomarker",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "How quickly did semaglutide lower hsCRP in the SELECT trial?",
+      "gold_pmcs": [
+        "PMC13574348"
+      ],
+      "gold_chunks": {
+        "PMC13574348_0009": 2
+      },
+      "facts": [
+        {
+          "id": "week4",
+          "description": "12% by 4 weeks",
+          "pattern": "\\b12\\s*%",
+          "evidence_chunks": [
+            "PMC13574348_0009"
+          ]
+        },
+        {
+          "id": "week8",
+          "description": "19% by 8 weeks",
+          "pattern": "\\b19\\s*%",
+          "evidence_chunks": [
+            "PMC13574348_0009"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N4",
+      "level": 1,
+      "category": "outcomes",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Was semaglutide associated with lower kidney-outcome risk in adults with ADPKD?",
+      "gold_pmcs": [
+        "PMC13519180"
+      ],
+      "gold_chunks": {
+        "PMC13519180_0013": 2,
+        "PMC13519180_0014": 2
+      },
+      "facts": [
+        {
+          "id": "hr_0447",
+          "description": "HR 0.447",
+          "pattern": "0\\.447",
+          "evidence_chunks": [
+            "PMC13519180_0013",
+            "PMC13519180_0014"
+          ]
+        },
+        {
+          "id": "eskd_ns",
+          "description": "ESKD HR 0.675 not significant",
+          "pattern": "0\\.675",
+          "evidence_chunks": [
+            "PMC13519180_0013",
+            "PMC13519180_0014"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N5",
+      "level": 1,
+      "category": "outcomes",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Does morning versus evening imatinib intake affect progression-free survival in metastatic GIST?",
+      "gold_pmcs": [
+        "PMC13310552"
+      ],
+      "gold_chunks": {
+        "PMC13310552_0006": 2
+      },
+      "facts": [
+        {
+          "id": "morning",
+          "description": "Median PFS 61.5 months morning",
+          "pattern": "61\\.5",
+          "evidence_chunks": [
+            "PMC13310552_0006"
+          ]
+        },
+        {
+          "id": "evening",
+          "description": "Median PFS 26.2 months evening",
+          "pattern": "26\\.2",
+          "evidence_chunks": [
+            "PMC13310552_0006"
+          ]
+        },
+        {
+          "id": "ns",
+          "description": "log-rank p = 0.22",
+          "pattern": "0\\.22",
+          "evidence_chunks": [
+            "PMC13310552_0006"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N6",
+      "level": 1,
+      "category": "outcomes",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What proportion of patients achieved a favorable molecular response at 12 months on first-line imatinib in the southern Morocco CML cohort?",
+      "gold_pmcs": [
+        "PMC13508003"
+      ],
+      "gold_chunks": {
+        "PMC13508003_0004": 2
+      },
+      "facts": [
+        {
+          "id": "mr12",
+          "description": "50.0% at 12 months",
+          "pattern": "50(?:\\.0)?\\s*%",
+          "evidence_chunks": [
+            "PMC13508003_0004"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N7",
+      "level": 1,
+      "category": "safety",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Which immune-related adverse events were most common during adjuvant pembrolizumab in the real-world early triple-negative breast cancer cohort?",
+      "gold_pmcs": [
+        "PMC13605040"
+      ],
+      "gold_chunks": {
+        "PMC13605040_0005": 2
+      },
+      "facts": [
+        {
+          "id": "hypothyroidism",
+          "description": "Hypothyroidism 11.8%",
+          "pattern": "11\\.8\\s*%",
+          "evidence_chunks": [
+            "PMC13605040_0005"
+          ]
+        },
+        {
+          "id": "colitis_dermatitis",
+          "description": "Colitis/dermatitis 7.4%",
+          "pattern": "7\\.4\\s*%",
+          "evidence_chunks": [
+            "PMC13605040_0005"
+          ]
+        },
+        {
+          "id": "neurotoxicity",
+          "description": "Neurotoxicity 4.4%",
+          "pattern": "4\\.4\\s*%",
+          "evidence_chunks": [
+            "PMC13605040_0005"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "N8",
+      "level": 1,
+      "category": "safety",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Which androgen receptor pathway inhibitor showed the strongest interstitial pneumonia signal in FAERS?",
+      "gold_pmcs": [
+        "PMC13541453"
+      ],
+      "gold_chunks": {
+        "PMC13541453_0011": 2
+      },
+      "facts": [
+        {
+          "id": "darolutamide",
+          "description": "Darolutamide strongest",
+          "pattern": "darolutamide",
+          "evidence_chunks": [
+            "PMC13541453_0011"
+          ]
+        },
+        {
+          "id": "ror",
+          "description": "ROR 7.30",
+          "pattern": "7\\.30?\\b",
+          "evidence_chunks": [
+            "PMC13541453_0011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M1",
+      "level": 2,
+      "category": "safety",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What safety signals have pharmacovigilance (FAERS or JADER) analyses identified for cancer therapies?",
+      "gold_pmcs": [
+        "PMC13541453",
+        "PMC13597272",
+        "PMC13593894",
+        "PMC13601259",
+        "PMC13506688",
+        "PMC13516075"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "arpi_pneumonitis",
+          "gold_pmcs": [
+            "PMC13541453"
+          ]
+        },
+        {
+          "id": "ici_thyroid",
+          "gold_pmcs": [
+            "PMC13597272"
+          ]
+        },
+        {
+          "id": "cachexia",
+          "gold_pmcs": [
+            "PMC13593894"
+          ]
+        },
+        {
+          "id": "zolbetuximab",
+          "gold_pmcs": [
+            "PMC13601259"
+          ]
+        },
+        {
+          "id": "egfr_tki_skin",
+          "gold_pmcs": [
+            "PMC13506688"
+          ]
+        },
+        {
+          "id": "arpi_cns",
+          "gold_pmcs": [
+            "PMC13516075"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M2",
+      "level": 2,
+      "category": "evidence_synthesis",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What evidence supports cardiometabolic, inflammatory or renal benefits of semaglutide beyond glucose lowering?",
+      "gold_pmcs": [
+        "PMC13574348",
+        "PMC13573316",
+        "PMC13565109",
+        "PMC13519180",
+        "PMC13564011"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "hscrp",
+          "gold_pmcs": [
+            "PMC13574348"
+          ]
+        },
+        {
+          "id": "hiv_cv",
+          "gold_pmcs": [
+            "PMC13573316"
+          ]
+        },
+        {
+          "id": "thromboinflammation",
+          "gold_pmcs": [
+            "PMC13565109"
+          ]
+        },
+        {
+          "id": "adpkd",
+          "gold_pmcs": [
+            "PMC13519180"
+          ]
+        },
+        {
+          "id": "hfpef",
+          "gold_pmcs": [
+            "PMC13564011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M3",
+      "level": 2,
+      "category": "efficacy_comparison",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "How do imatinib and later-generation TKIs compare for frontline chronic myeloid leukemia across efficacy, safety and cost?",
+      "gold_pmcs": [
+        "PMC13508003",
+        "PMC13492314",
+        "PMC13357042",
+        "PMC13291802",
+        "PMC13461844",
+        "PMC13233626"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "rwe",
+          "gold_pmcs": [
+            "PMC13508003"
+          ]
+        },
+        {
+          "id": "frontline_choice",
+          "gold_pmcs": [
+            "PMC13492314"
+          ]
+        },
+        {
+          "id": "cost",
+          "gold_pmcs": [
+            "PMC13357042"
+          ]
+        },
+        {
+          "id": "asciminib",
+          "gold_pmcs": [
+            "PMC13291802"
+          ]
+        },
+        {
+          "id": "maic",
+          "gold_pmcs": [
+            "PMC13461844"
+          ]
+        },
+        {
+          "id": "review",
+          "gold_pmcs": [
+            "PMC13233626"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M4",
+      "level": 2,
+      "category": "evidence_synthesis",
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What is known about the safety and effectiveness of adalimumab and other biologics in pediatric inflammatory disease?",
+      "gold_pmcs": [
+        "PMC13355144",
+        "PMC13430079",
+        "PMC13415550",
+        "PMC13401782",
+        "PMC13010185"
+      ],
+      "gold_chunks": {},
+      "facts": [],
+      "aspects": [
+        {
+          "id": "ibd_infections",
+          "gold_pmcs": [
+            "PMC13355144"
+          ]
+        },
+        {
+          "id": "uveitis_mtx",
+          "gold_pmcs": [
+            "PMC13430079"
+          ]
+        },
+        {
+          "id": "uveitis_levels",
+          "gold_pmcs": [
+            "PMC13415550"
+          ]
+        },
+        {
+          "id": "uk_access",
+          "gold_pmcs": [
+            "PMC13401782"
+          ]
+        },
+        {
+          "id": "post_hsct",
+          "gold_pmcs": [
+            "PMC13010185"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C3",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What is the mechanism of action of teplizumab in type 1 diabetes?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "teplizumab"
+      ]
+    },
+    {
+      "id": "C4",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "How effective is sotatercept in pulmonary arterial hypertension?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "sotatercept"
+      ]
+    },
+    {
+      "id": "C5",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What outcomes has risdiplam shown in spinal muscular atrophy?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "risdiplam"
+      ]
+    },
+    {
+      "id": "C6",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Is zuranolone effective for postpartum depression?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "zuranolone"
+      ]
+    },
+    {
+      "id": "C7",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What is the efficacy of semaglutide in glioblastoma?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "glioblastoma"
+      ]
+    },
+    {
+      "id": "C8",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Does adalimumab improve survival in osteosarcoma?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "osteosarcoma"
+      ]
+    },
+    {
+      "id": "C9",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Is pembrolizumab effective for migraine prevention?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "migraine"
+      ]
+    },
+    {
+      "id": "C10",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What is the efficacy of enzalutamide in asthma?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "asthma"
+      ]
+    },
+    {
+      "id": "C11",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "Does nivolumab treat malaria?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "malaria"
+      ]
+    },
+    {
+      "id": "C12",
+      "level": 1,
+      "category": "control",
+      "control": true,
+      "review_status": "draft",
+      "split": "heldout",
+      "question": "What is the role of trastuzumab in schizophrenia?",
+      "gold_pmcs": [],
+      "gold_chunks": {},
+      "facts": [],
+      "absent_terms": [
+        "schizophrenia"
+      ]
     }
   ]
 }

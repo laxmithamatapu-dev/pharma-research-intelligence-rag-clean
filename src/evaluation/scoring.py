@@ -101,6 +101,8 @@ def _cited_ids(line):
 def _generation_outcome(record):
     generation = record.get("generation") or {}
     validations = generation.get("validations") or []
+    if record.get("abstained"):
+        return "abstained"
     if generation.get("skipped"):
         return "skipped"
     if generation.get("error"):
@@ -309,7 +311,7 @@ def _score_context_and_answer(record, definition):
                 sum(1 for heading in headings if heading.casefold() in answer_heading_lines),
                 len(headings),
             ),
-            "abstained": ABSTENTION_PHRASE in answer.casefold(),
+            "abstained": record.get("abstained") or ABSTENTION_PHRASE in answer.casefold(),
             "absent_entity_claims": len(absent_claims),
         },
         "facts": facts,
@@ -376,9 +378,9 @@ def _evaluate(definition, retrieval, scored):
     if outcome == "skipped":
         return {"retrieval_pass": retrieval_pass, "answer_pass": None, "pass": retrieval_pass}
 
-    generation_ok = outcome in {"pass_first", "pass_after_prune"}
+    generation_ok = outcome in {"pass_first", "pass_after_prune", "abstained"}
     if control:
-        answer_pass = answer["absent_entity_claims"] == 0
+        answer_pass = outcome == "abstained" or answer["absent_entity_claims"] == 0
     elif level == 1:
         recall = answer["fact_recall"]
         answer_pass = (

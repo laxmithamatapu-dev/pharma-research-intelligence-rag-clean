@@ -98,6 +98,22 @@ class QwenGenerator:
 
     DEFAULT_OPTIONS = {"num_ctx": 8192, "temperature": 0, "seed": 0}
 
+    def warm_up(self) -> dict[str, Any]:
+        """Load the model with the generation context size so the first answer does not pay the load."""
+        url = self._ollama_chat_url().rsplit("/", 1)[0] + "/generate"
+        started = time.time()
+        response = requests.post(
+            url,
+            json={
+                "model": self.model_name,
+                "keep_alive": self.keep_alive,
+                "options": {"num_ctx": self.options.get("num_ctx")},
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return {"seconds": time.time() - started, "load_duration": response.json().get("load_duration")}
+
     @staticmethod
     def _ollama_chat_url() -> str:
         host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434").strip()
@@ -110,10 +126,12 @@ class QwenGenerator:
         model_name: str = "qwen2.5:7b",
         timeout: float = 600.0,
         options: dict[str, Any] | None = None,
+        keep_alive: str | None = None,
     ):
         self.model_name = model_name
         self.timeout = timeout
         self.options = dict(self.DEFAULT_OPTIONS if options is None else options)
+        self.keep_alive = keep_alive or os.environ.get("OLLAMA_KEEP_ALIVE", "30m")
         self.last_stats: dict[str, Any] = {}
 
         print(
@@ -532,6 +550,7 @@ ANSWER:
                     "messages": [{"role": "user", "content": prompt}],
                     "stream": False,
                     "options": dict(self.options),
+                    "keep_alive": self.keep_alive,
                 },
                 timeout=self.timeout,
             )

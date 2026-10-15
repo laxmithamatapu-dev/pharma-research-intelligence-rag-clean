@@ -9,11 +9,12 @@ __pycache__/
 .env
 
 data/
-chroma/
-embeddings/
-models/
+/chroma/
+/embeddings/
+/models/
 
 debug_runs/
 
 *.log
 benchmark_runs/
+logs/

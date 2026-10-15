@@ -22,6 +22,7 @@ class EvidenceSet:
     papers: list
     chunks: list
     telemetry: dict = field(default_factory=dict)
+    abstained: bool = False
 
 
 def retrieve_evidence(question, query_info=None, plan=None):
@@ -36,6 +37,16 @@ def retrieve_evidence(question, query_info=None, plan=None):
     )
     ranked, paper_telemetry = rank_papers(question, sources)
     telemetry.update(paper_telemetry)
+    telemetry["top_paper_scores"] = [round(paper.score, 4) for paper in ranked[:8]]
+
+    if plan.paper_floor is not None and (not ranked or ranked[0].score < plan.paper_floor):
+        telemetry.update({
+            "abstained": True,
+            "paper_floor": plan.paper_floor,
+            "candidate_papers": [paper.pmcid for paper in ranked],
+            "retrieval_seconds": time.perf_counter() - started,
+        })
+        return EvidenceSet(plan=plan, allocation=(), papers=[], chunks=[], telemetry=telemetry, abstained=True)
 
     margin = paper_margin(ranked)
     allocation = plan.allocation
@@ -76,6 +87,7 @@ def retrieve_evidence(question, query_info=None, plan=None):
         "paper_margin": margin,
         "allocation": list(allocation),
         "papers_selected": [paper.pmcid for paper in selected],
+        "abstained": False,
         "retrieval_seconds": time.perf_counter() - started,
     })
     return EvidenceSet(plan=plan, allocation=allocation, papers=selected, chunks=chunks, telemetry=telemetry)
