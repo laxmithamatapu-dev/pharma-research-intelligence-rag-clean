@@ -21,19 +21,35 @@ query_model.eval()
 print("Query Encoder loaded.")
 
 
-print("\nLoading MedCPT Article Encoder...")
+_article_encoder = None
 
-article_tokenizer = AutoTokenizer.from_pretrained(
-    ARTICLE_MODEL_NAME
-)
 
-article_model = AutoModel.from_pretrained(
-    ARTICLE_MODEL_NAME
-)
+def get_article_encoder():
+    """
+    Load the article encoder on first use; serving needs only the query encoder.
+    """
 
-article_model.eval()
+    global _article_encoder
 
-print("Article Encoder loaded.")
+    if _article_encoder is None:
+
+        print("\nLoading MedCPT Article Encoder...")
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            ARTICLE_MODEL_NAME
+        )
+
+        model = AutoModel.from_pretrained(
+            ARTICLE_MODEL_NAME
+        )
+
+        model.eval()
+
+        print("Article Encoder loaded.")
+
+        _article_encoder = (tokenizer, model)
+
+    return _article_encoder
 
 
 def mean_pooling(last_hidden_state, attention_mask):
@@ -56,6 +72,26 @@ def mean_pooling(last_hidden_state, attention_mask):
     )
 
     return summed / counts
+
+
+def embed_paper_query(text: str):
+    """
+    Encode a question for the paper index (CLS pooling, max_length 64, as documented for MedCPT).
+    """
+
+    inputs = query_tokenizer(
+        text,
+        return_tensors="pt",
+        truncation=True,
+        max_length=64,
+        padding=True
+    )
+
+    with torch.no_grad():
+
+        outputs = query_model(**inputs)
+
+    return outputs.last_hidden_state[:, 0, :].squeeze().cpu().numpy()
 
 
 def embed_query(text: str):
@@ -88,6 +124,8 @@ def embed_document(text: str):
     Encode article chunk.
     """
 
+    article_tokenizer, article_model = get_article_encoder()
+
     inputs = article_tokenizer(
         text,
         return_tensors="pt",
@@ -106,6 +144,50 @@ def embed_document(text: str):
         )
 
     return embedding.squeeze().cpu().numpy()
+
+
+def embed_papers(papers, pooling: str = "mean", batch_size: int = 16):
+    """
+    Encode (title, abstract) pairs as MedCPT article inputs.
+    """
+
+    if pooling not in ("mean", "cls"):
+        raise ValueError(f"Unknown pooling: {pooling}")
+
+    article_tokenizer, article_model = get_article_encoder()
+
+    embeddings = []
+
+    for start in range(0, len(papers), batch_size):
+
+        batch = [
+            [title or "", abstract or ""]
+            for title, abstract in papers[start:start + batch_size]
+        ]
+
+        inputs = article_tokenizer(
+            batch,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+            padding=True
+        )
+
+        with torch.no_grad():
+
+            outputs = article_model(**inputs)
+
+            if pooling == "cls":
+                pooled = outputs.last_hidden_state[:, 0, :]
+            else:
+                pooled = mean_pooling(
+                    outputs.last_hidden_state,
+                    inputs["attention_mask"]
+                )
+
+        embeddings.extend(pooled.cpu().numpy())
+
+    return embeddings
 
 
 def embed_chunk(chunk: dict):

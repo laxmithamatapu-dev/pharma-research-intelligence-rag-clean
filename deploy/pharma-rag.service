@@ -1,0 +1,20 @@
+[Unit]
+Description=Pharma Research Intelligence RAG service (paper-first retrieval, local Ollama)
+After=network.target ollama.service
+Requires=ollama.service
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/projects/pharma-research-intelligence-rag-clean
+Environment=HF_HUB_OFFLINE=1
+Environment=RETRIEVAL_MODE=paper_first
+Environment=OLLAMA_KEEP_ALIVE=-1
+Environment=RAG_HOST=127.0.0.1
+Environment=RAG_PORT=8000
+ExecStart=/home/azureuser/projects/pharma-research-intelligence-rag-clean/.venv/bin/python serve.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

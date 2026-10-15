@@ -1,16 +1,95 @@
+from pathlib import Path
+
 import chromadb
 
 
 COLLECTION_NAME = "pharma_research"
 
+PAPERS_COLLECTION_NAME = "pharma_papers"
+
+CHROMA_PATH = Path(__file__).resolve().parents[2] / "data" / "chromadb"
+
 
 client = chromadb.PersistentClient(
-    path="data/chromadb"
+    path=str(CHROMA_PATH)
 )
 
 collection = client.get_or_create_collection(
     name=COLLECTION_NAME
 )
+
+
+def get_papers_collection(distance: str = "l2"):
+    """
+    Return the paper-level collection, creating it with the given distance if missing.
+    """
+
+    return client.get_or_create_collection(
+        name=PAPERS_COLLECTION_NAME,
+        metadata={"hnsw:space": distance},
+    )
+
+
+def reset_papers_collection(distance: str = "l2"):
+    """
+    Drop and recreate the paper-level collection.
+    """
+
+    existing = [item.name for item in client.list_collections()]
+    if PAPERS_COLLECTION_NAME in existing:
+        client.delete_collection(PAPERS_COLLECTION_NAME)
+    return get_papers_collection(distance)
+
+
+def store_papers(paper_records, distance: str = "l2"):
+    """
+    Upsert paper-level records into the paper collection.
+    """
+
+    papers = get_papers_collection(distance)
+
+    papers.upsert(
+        ids=[record["pmcid"] for record in paper_records],
+        embeddings=[record["embedding"] for record in paper_records],
+        documents=[record["document"] for record in paper_records],
+        metadatas=[
+            {
+                key: _metadata_value(value)
+                for key, value in record["metadata"].items()
+            }
+            for record in paper_records
+        ],
+    )
+
+    return papers.count()
+
+
+def passages_for_paper(pmcid: str):
+    """
+    Return every indexed passage of a paper in chunk order.
+    """
+
+    result = collection.get(
+        where={"pmcid": pmcid},
+        include=["documents", "metadatas"],
+    )
+
+    passages = [
+        {
+            "chunk_id": chunk_id,
+            "text": document,
+            "pmcid": metadata.get("pmcid"),
+            "section_path": metadata.get("section_path"),
+            "metadata": metadata,
+        }
+        for chunk_id, document, metadata in zip(
+            result["ids"],
+            result["documents"],
+            result["metadatas"],
+        )
+    ]
+
+    return sorted(passages, key=lambda passage: passage["chunk_id"])
 
 
 def _metadata_value(value, default=""):

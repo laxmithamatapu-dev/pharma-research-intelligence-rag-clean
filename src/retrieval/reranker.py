@@ -279,3 +279,71 @@ def rerank_chunks(
         )
 
     return final_chunks
+
+def select_passages_by_paper(
+    query: str,
+    papers: list,
+    question_type: str | None = None,
+):
+    """
+    Select passages within ranked papers.
+
+    `papers` is a list of (pmcid, candidate_passages, quota) in paper-rank order.
+    All candidates are scored together (cross-encoder, min-max normalization,
+    question-type bonus), then each paper contributes its top `quota` passages.
+    """
+
+    candidates = [
+        passage
+        for _, passages, quota in papers
+        if quota > 0
+        for passage in passages
+    ]
+
+    if not candidates:
+        return []
+
+    scores = [
+        float(score)
+        for score in reranker.predict([(query, passage["text"]) for passage in candidates])
+    ]
+    resolved_question_type = _resolve_question_type(query, question_type)
+    minimum_score = min(scores)
+    score_range = max(scores) - minimum_score
+
+    scored = {}
+    for passage, score in zip(candidates, scores):
+        normalized_score = (score - minimum_score) / score_range if score_range else 0.5
+        bonus = _question_type_bonus(passage, resolved_question_type)
+        scored[passage["chunk_id"]] = {
+            **passage,
+            "rerank_score": score,
+            "normalized_rerank_score": normalized_score,
+            "question_type_score": bonus,
+            "combined_rerank_score": normalized_score + bonus,
+        }
+
+    seen_signatures = set()
+    selected = []
+    for paper_rank, (pmcid, passages, quota) in enumerate(papers, start=1):
+        ranked = sorted(
+            (scored[passage["chunk_id"]] for passage in passages if passage["chunk_id"] in scored),
+            key=lambda item: item["combined_rerank_score"],
+            reverse=True,
+        )
+        taken = 0
+        for rank_in_paper, passage in enumerate(ranked, start=1):
+            if taken >= quota:
+                break
+            signature = passage.get("text", "").lower().strip()[:300]
+            if signature in seen_signatures:
+                continue
+            seen_signatures.add(signature)
+            selected.append({
+                **passage,
+                "paper_rank": paper_rank,
+                "rank_in_paper": rank_in_paper,
+            })
+            taken += 1
+
+    return selected

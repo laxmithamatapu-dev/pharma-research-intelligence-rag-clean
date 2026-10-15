@@ -5,9 +5,92 @@ sys.path.append(
     str(Path(__file__).resolve().parents[1])
 )
 
+import time
+from dataclasses import dataclass, field
+
 from embeddings.embedder import embed_query
-from vector_store.chroma_store import collection
-from retrieval.reranker import rerank_chunks
+from vector_store.chroma_store import collection, passages_for_paper
+from retrieval.reranker import rerank_chunks, select_passages_by_paper
+from retrieval.paper_retriever import candidate_papers, paper_margin, prerank_passages, rank_papers
+from retrieval.retrieval_strategy import PLAN_SHAPES
+
+
+@dataclass
+class EvidenceSet:
+    plan: object
+    allocation: tuple
+    papers: list
+    chunks: list
+    telemetry: dict = field(default_factory=dict)
+    abstained: bool = False
+
+
+def retrieve_evidence(question, query_info=None, plan=None):
+    """
+    Paper-first retrieval: rank papers, then select passages inside the selected papers.
+    """
+    started = time.perf_counter()
+    sources, telemetry, question_vector = candidate_papers(
+        question,
+        plan.paper_candidates,
+        plan.passage_candidates,
+    )
+    ranked, paper_telemetry = rank_papers(question, sources)
+    telemetry.update(paper_telemetry)
+    telemetry["top_paper_scores"] = [round(paper.score, 4) for paper in ranked[:8]]
+
+    if plan.paper_floor is not None and (not ranked or ranked[0].score < plan.paper_floor):
+        telemetry.update({
+            "abstained": True,
+            "paper_floor": plan.paper_floor,
+            "candidate_papers": [paper.pmcid for paper in ranked],
+            "retrieval_seconds": time.perf_counter() - started,
+        })
+        return EvidenceSet(plan=plan, allocation=(), papers=[], chunks=[], telemetry=telemetry, abstained=True)
+
+    margin = paper_margin(ranked)
+    allocation = plan.allocation
+    if plan.shape == "adaptive":
+        allocation = PLAN_SHAPES["depth"] if margin >= plan.adaptive_margin else PLAN_SHAPES["breadth"]
+    selected = ranked[:len(allocation)]
+
+    passage_started = time.perf_counter()
+    papers_input = [
+        (
+            paper.pmcid,
+            prerank_passages(
+                question_vector,
+                passages_for_paper(paper.pmcid),
+                plan.passages_considered_per_paper,
+            ),
+            quota,
+        )
+        for paper, quota in zip(selected, allocation)
+    ]
+    chunks = select_passages_by_paper(
+        question,
+        papers_input,
+        (query_info or {}).get("question_type"),
+    )
+    by_pmcid = {paper.pmcid: paper for paper in selected}
+    for chunk in chunks:
+        paper = by_pmcid[chunk["pmcid"]]
+        chunk["paper_title"] = paper.title
+        chunk["paper_score"] = paper.score
+        chunk["paper_metadata"] = paper.metadata
+
+    telemetry.update({
+        "passage_selection_seconds": time.perf_counter() - passage_started,
+        "passages_scored": sum(len(passages) for _, passages, _ in papers_input),
+        "considered_chunk_ids": [passage["chunk_id"] for _, passages, _ in papers_input for passage in passages],
+        "candidate_papers": [paper.pmcid for paper in ranked],
+        "paper_margin": margin,
+        "allocation": list(allocation),
+        "papers_selected": [paper.pmcid for paper in selected],
+        "abstained": False,
+        "retrieval_seconds": time.perf_counter() - started,
+    })
+    return EvidenceSet(plan=plan, allocation=allocation, papers=selected, chunks=chunks, telemetry=telemetry)
 
 
 def _normalize_queries(
@@ -68,11 +151,23 @@ def retrieve_chunks(
 
     if query_info is not None:
         expanded_queries = query_info.get("expanded_queries", []) or []
-        retrieval_hints = query_info.get("retrieval_hints", []) or []
+
         if queries is None:
-            queries = [question] if question else []
-            queries.extend(expanded_queries)
-            queries.extend(retrieval_hints)
+
+            candidate_queries = []
+
+            if question:
+                candidate_queries.append(question)
+
+            candidate_queries.extend(expanded_queries)
+
+            queries = list(
+                dict.fromkeys(
+                    q.strip()
+                    for q in candidate_queries
+                    if isinstance(q, str) and q.strip()
+                )
+            )
 
     if question is not None and original_question is None:
         original_question = question

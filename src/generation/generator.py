@@ -1,9 +1,28 @@
 import json
+import os
 import re
-import subprocess
 import time
 from typing import Any
 
+import requests
+
+
+AUTHOR_NAME = r"[A-Z][A-Za-z'-]+(?:\s+(?:and|&)\s+[A-Z][A-Za-z'-]+)?\s+et\s+al\.?(?:\s*\(\s*\d{4}[a-z]?\s*\))?"
+
+LEAD_ATTRIBUTION_PATTERN = re.compile(
+    rf"\b(?:according to|as (?:reported|described|shown|noted) by)\s+(?:the study by\s+)?{AUTHOR_NAME}\s*,?\s*",
+    flags=re.IGNORECASE,
+)
+
+BY_AUTHOR_PATTERN = re.compile(rf"\s+by\s+{AUTHOR_NAME}")
+
+AUTHOR_PATTERN = re.compile(rf"\b{AUTHOR_NAME}")
+
+SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=\S)")
+
+STATISTIC_BRACKET_PATTERN = re.compile(
+    r"\[(?!\s*E\d)([^\[\]]*?(?:\d\s*%|\b(?:CI|IQR|HR|OR|RR|SD|SE|aHR|aOR)\b|\bp\s*[=<>≤])[^\[\]]*)\]"
+)
 
 NON_EVIDENCE_CITATION_PATTERN = re.compile(
     r"\b(?:doi|pmid|pmcid)\b|"
@@ -24,6 +43,8 @@ class QwenGenerator:
         "possibly",
         "likely",
     )
+
+    ABSTENTION_STATEMENT = "not established in the supplied evidence"
 
     ANSWER_SECTIONS = {
         "MECHANISM": (
@@ -79,11 +100,52 @@ class QwenGenerator:
         ),
     }
 
+    DEFAULT_OPTIONS = {
+        "num_ctx": 8192,
+        "temperature": 0,
+        "seed": 0,
+        "num_thread": int(os.environ.get("OLLAMA_NUM_THREAD", os.cpu_count() or 4)),
+    }
+
+    def warm_up(self) -> dict[str, Any]:
+        """Load the model with the generation context size so the first answer does not pay the load."""
+        url = self._ollama_chat_url().rsplit("/", 1)[0] + "/generate"
+        started = time.time()
+        response = requests.post(
+            url,
+            json={
+                "model": self.model_name,
+                "keep_alive": self.keep_alive,
+                "options": {
+                    key: self.options[key]
+                    for key in ("num_ctx", "num_thread")
+                    if key in self.options
+                },
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return {"seconds": time.time() - started, "load_duration": response.json().get("load_duration")}
+
+    @staticmethod
+    def _ollama_chat_url() -> str:
+        host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434").strip()
+        if not host.startswith(("http://", "https://")):
+            host = f"http://{host}"
+        return f"{host.rstrip('/')}/api/chat"
+
     def __init__(
         self,
-        model_name: str = "qwen2.5:7b"
+        model_name: str = "qwen2.5:7b",
+        timeout: float = 600.0,
+        options: dict[str, Any] | None = None,
+        keep_alive: str | None = None,
     ):
         self.model_name = model_name
+        self.timeout = timeout
+        self.options = dict(self.DEFAULT_OPTIONS if options is None else options)
+        self.keep_alive = keep_alive or os.environ.get("OLLAMA_KEEP_ALIVE", "30m")
+        self.last_stats: dict[str, Any] = {}
 
         print(
             f"\nUsing Ollama model: "
@@ -252,6 +314,8 @@ ANSWER:
         )
         answer = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", answer)
 
+        answer = STATISTIC_BRACKET_PATTERN.sub(r"(\1)", answer)
+
         evidence_list = r"E\d+(?:(?:\s*[,;]\s*|\s*-\s*)E?\d+)*"
 
         def normalize_group(match: re.Match) -> str:
@@ -359,10 +423,62 @@ ANSWER:
 
         lowered_answer = answer.lower()
         for phrase in self.FORBIDDEN_PHRASES:
-            if phrase in lowered_answer:
+            if re.search(rf"\b{re.escape(phrase)}\b", lowered_answer):
                 errors.append(f"forbidden phrase detected: {phrase}")
 
         return list(dict.fromkeys(errors))
+
+    @classmethod
+    def _is_abstention_line(cls, line: str) -> bool:
+        statement = re.sub(r"^[\s>*\-•]+|[\s.*]+$", "", line).casefold()
+        return statement == cls.ABSTENTION_STATEMENT
+
+    @staticmethod
+    def _strip_author_attributions(answer: str) -> str:
+        """Remove invented author attributions while keeping the claim and its [E#] citations."""
+
+        lines = []
+        for line in answer.splitlines():
+            stripped = LEAD_ATTRIBUTION_PATTERN.sub(
+                lambda match: "In " if line[match.end():match.end() + 1] == "[" else "",
+                line,
+            )
+            stripped = BY_AUTHOR_PATTERN.sub("", stripped)
+            stripped = AUTHOR_PATTERN.sub("the study", stripped)
+            stripped = re.sub(
+                r"(^\s*(?:[-*]\s*)?(?:\*\*[^*]+\*\*:\s*)?)([a-z])",
+                lambda match: match.group(1) + match.group(2).upper(),
+                stripped,
+            ) if stripped != line else stripped
+            lines.append(stripped)
+        return "\n".join(lines)
+
+    def _drop_offending_sentences(self, answer: str, context: str) -> str:
+        """Drop only the sentences that fail validation; keep the rest of the answer."""
+        kept_lines = []
+        in_references = False
+        for line in answer.splitlines():
+            if re.match(r"^\s*##\s+References\s*$", line, re.IGNORECASE):
+                in_references = True
+            if in_references or not line.strip():
+                kept_lines.append(line)
+                continue
+            if line.lstrip().startswith("#"):
+                heading = re.match(r"^(\s*#+[^:]*:\s*)(\S.*)$", line)
+                if not heading:
+                    kept_lines.append(line)
+                    continue
+                prefix, content = heading.groups()
+                kept = [s for s in SENTENCE_BOUNDARY.split(content) if not self.validate_answer(s, context)]
+                kept_lines.append(prefix + " ".join(kept) if kept else prefix.rstrip())
+                continue
+            marker = re.match(r"^\s*(?:[-*]|\d+[.)])\s+", line)
+            prefix = marker.group(0) if marker else ""
+            sentences = SENTENCE_BOUNDARY.split(line[len(prefix):])
+            kept = [sentence for sentence in sentences if not self.validate_answer(sentence, context)]
+            if kept:
+                kept_lines.append(prefix + " ".join(kept))
+        return "\n".join(kept_lines)
 
     def _retain_cited_claims(
         self,
@@ -389,6 +505,9 @@ ANSWER:
                     retained.append("")
                 continue
             if line.lstrip().startswith("#"):
+                retained.append(line)
+                continue
+            if self._is_abstention_line(line):
                 retained.append(line)
                 continue
 
@@ -441,33 +560,72 @@ ANSWER:
             f"\nPrompt Length: "
             f"{len(prompt)} characters"
         )
-
+        print(
+            f"Prompt Words: "
+            f"{len(prompt.split())}"
+        )
         start = time.time()
 
-        result = subprocess.run(
-            [
-                "ollama",
-                "run",
-                self.model_name
-            ],
-            input=prompt,
-            text=True,
-            capture_output=True
-        )
+        try:
+            response = requests.post(
+                self._ollama_chat_url(),
+                json={
+                    "model": self.model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                    "options": dict(self.options),
+                    "keep_alive": self.keep_alive,
+                },
+                timeout=self.timeout,
+            )
+        except requests.Timeout as error:
+            raise RuntimeError(
+                f"Ollama generation timed out after {self.timeout:.0f} seconds"
+            ) from error
+        except requests.RequestException as error:
+            raise RuntimeError(f"Ollama Error:\n{error}") from error
 
         print(
             f"\nOllama Call Time: "
             f"{time.time() - start:.2f} seconds"
         )
 
-        if result.returncode != 0:
+        if response.status_code != 200:
             raise RuntimeError(
                 f"Ollama Error:\n"
-                f"{result.stderr}"
+                f"{response.status_code} {response.text[:500]}"
             )
 
-        answer = self.normalize_answer(result.stdout)
+        body = response.json()
+        self.last_stats = {
+            key: body.get(key)
+            for key in (
+                "prompt_eval_count",
+                "prompt_eval_duration",
+                "eval_count",
+                "eval_duration",
+                "load_duration",
+                "total_duration",
+                "done_reason",
+            )
+        }
+
+        answer = self.normalize_answer((body.get("message") or {}).get("content", ""))
+        print(
+            f"\nAnswer Characters: "
+            f"{len(answer)}"
+        )
+
+        print(
+            f"Answer Words: "
+            f"{len(answer.split())}"
+        )
+        answer = self._strip_author_attributions(answer)
         validation_errors = self.validate_answer(answer, context)
+
+        if validation_errors:
+            answer = self.normalize_answer(self._drop_offending_sentences(answer, context))
+            validation_errors = self.validate_answer(answer, context)
 
         if validation_errors:
             answer = self._retain_cited_claims(answer, context)
