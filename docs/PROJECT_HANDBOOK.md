@@ -365,3 +365,9 @@ Each item is a fact with evidence; no fixes proposed yet.
 - Not production-ready: blockers are evidence quality, output corruption by pruning, non-deterministic evidence budget, unmeasured correctness/abstention, operational fragility.
 - Proposed immediate code changes (pending approval): unwrapped output + sentence-aware pruning; validator word-boundary + keep "Not established"; deterministic classification/budget; explicit Ollama options + timeout; absolute paths, offline load, failure artifacts.
 - Target architecture: warm service; paper-first (title+abstract paper index), passage-second (rerank within selected papers, scope-based quotas, relevance floor); token-budgeted context at num_ctx 8192; sentence-level citation verification; telemetry; harness as quality gate.
+
+## Discovery Log — pass 9 (2026-10-15, two-day execution; see [TWO_DAY_RESULTS.md](TWO_DAY_RESULTS.md))
+47. F1–F5 merged on branch `fix/correctness-2day`: wrap artifacts 57 → 0 escapes, 38 → 0 broken lines; classification stable 27/27 across seeds (268/270 over 10 processes); index path and generation timeout fixed.
+48. E2a (title-context passage vectors): answer-chunk recall@20 0.35 → 0.60, pool entry 9 → 14/20, but delivery unchanged (6/20) and fact visibility +3.8 pts → decision `reranker_bottleneck`. Title context halves within-paper discrimination (0.93 → 0.50) and reduces pool diversity (18 → 12 papers). Use titles for paper retrieval, not passage ranking.
+49. Generation: fabricated author attribution ("Huang et al. [E2]") causes total answer loss (L1-16, 2/2 runs); numbers omitted despite being in evidence (L1-05, L1-12); identical prompt yields different fact recall (L1-08) — generation lacks seed/temperature control.
+50. Controls abstained with 0 cited claims in 4/4 runs.
