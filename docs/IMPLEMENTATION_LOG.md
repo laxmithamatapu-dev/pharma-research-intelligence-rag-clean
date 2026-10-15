@@ -118,3 +118,37 @@ Runtime check: Ollama loads `qwen2.5:7b` with context 8,192 (runner 5.5 GB vs 5.
 **Next**
 - **Session 3b (generation hygiene, small)**: make benchmark repeats cache-independent (cold repeats) or disable prompt caching for evaluation; fix the study-design substring match or drop the design from the header; decide the policy for uncited factual sentences; stop pruning from deleting uncited answer content wholesale.
 - Then Session 4 (index content) and Session 5 (abstention + cut-over) as planned.
+
+## Session 3b — Answer correctness fixes (2026-10-15)
+
+Priority set by the owner: **answers must be right**; latency must be explained, not traded against correctness. Evaluation uses first (cold-cache) runs; run-to-run determinism is not pursued further.
+
+| Fix | Problem (measured) | Change | Effect (measured) |
+|---|---|---|---|
+| Study-design labels | Cues OR-matched by substring and `randomized_phase_I` checked first → every paper mentioning "randomized" labeled phase I (92 papers; 0 phase II/III). The label is shown to Qwen in the paper header (L1-13 answer repeated "randomized phase I") | Phase designs need a whole-word phase term **and** randomization; reviews/meta-analyses checked first; cues match at word starts | 106 paper labels corrected (e.g. CheckMate 9ER → phase III, OPTIM → phase II, 22 systematic reviews and 4 meta-analyses no longer "phase I"); paper index rebuilt (568 papers, 140 s). Passage metadata used by legacy mode is corrected at the next passage re-index |
+| Invented author attribution | "According to Huang et al. [E2]" made the whole answer fail (L1-16 in every run) | Strip the invented attribution, keep the claim and its `[E#]` citation | L1-16 now passes with 2–3 expected facts |
+| Destructive pruning | One forbidden word (e.g. "less likely to undergo rebiopsy") pruned every uncited line; L1-12 lost all facts | Drop only failing sentences; cited-line pruning only as a last resort | L1-12: 0 → 3 facts |
+
+**Replay of all 62 stored raw answers (old vs new post-processing, no LLM):** failed answers 5 → **0**; expected facts in final answers 72 → **90 (+25 %)**; no answer lost a fact.
+
+Tests: `src/processing/test_evidence_classifier.py` (6), answer-repair tests (5); full suite passes.
+
+Known residuals: keyword design labels remain approximate (some narrative reviews that mention randomized trials read "randomized_trial"); uncited factual sentences still pass validation (L1-13) — the facts are correct but not linked to evidence.
+
+## Where generation time goes (measured, Session 3 runs, first runs only)
+
+| | Legacy | Paper-first |
+|---|---|---|
+| Prompt tokens (median) | 2,152 | 3,468 |
+| Answer tokens (median) | 325 | 314 |
+| **Reading the prompt (prefill)** | 33 s (42 %) | **58 s (52 %)** |
+| **Writing the answer (decode)** | 47 s (50 %) | **53 s (45 %)** |
+| Retrieval | 2.8 s (4 %) | 4.9 s (4 %) |
+| Query understanding | ≈ 0 s | ≈ 0 s |
+| **Total (median)** | **69 s** | **121 s** |
+
+- Rates on this VM: prefill **≈ 64 tokens/s** (56–71), decode **≈ 6.3 tokens/s** (5.6–7.3), with 4 llama.cpp threads.
+- Prompt size: tokens ≈ 451 + 263 per 1,000 evidence characters (R² 0.95); **each evidence passage ≈ 350 tokens ≈ 5.5 s of prefill**; **each 100 answer tokens ≈ 16 s of decode**.
+- Why decode is slow (calculation): every generated token reads the full 4.25 GB of quantized weights; 6.3 tokens/s × 4.25 GB ≈ 27 GB/s, i.e. decode is limited by memory bandwidth on this CPU, not by the code. Prefill processes the prompt in parallel batches and is about 10× faster per token.
+- Paper-first costs ≈ +1,300 prompt tokens (+25 s prefill) for ≈ 2× the expected facts in answers.
+- Model load: 0–8 s when warm; up to 119 s for the first request after a VM reboot (weights read from disk).
