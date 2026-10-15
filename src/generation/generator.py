@@ -25,6 +25,8 @@ class QwenGenerator:
         "likely",
     )
 
+    ABSTENTION_STATEMENT = "not established in the supplied evidence"
+
     ANSWER_SECTIONS = {
         "MECHANISM": (
             "## Molecular Target",
@@ -359,10 +361,15 @@ ANSWER:
 
         lowered_answer = answer.lower()
         for phrase in self.FORBIDDEN_PHRASES:
-            if phrase in lowered_answer:
+            if re.search(rf"\b{re.escape(phrase)}\b", lowered_answer):
                 errors.append(f"forbidden phrase detected: {phrase}")
 
         return list(dict.fromkeys(errors))
+
+    @classmethod
+    def _is_abstention_line(cls, line: str) -> bool:
+        statement = re.sub(r"^[\s>*\-•]+|[\s.*]+$", "", line).casefold()
+        return statement == cls.ABSTENTION_STATEMENT
 
     def _retain_cited_claims(
         self,
@@ -389,6 +396,9 @@ ANSWER:
                     retained.append("")
                 continue
             if line.lstrip().startswith("#"):
+                retained.append(line)
+                continue
+            if self._is_abstention_line(line):
                 retained.append(line)
                 continue
 
