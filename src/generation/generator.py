@@ -127,6 +127,37 @@ class QwenGenerator:
         response.raise_for_status()
         return {"seconds": time.time() - started, "load_duration": response.json().get("load_duration")}
 
+    def _is_loaded(self) -> bool:
+        url = self._ollama_chat_url().rsplit("/", 1)[0] + "/ps"
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return any(
+            item.get("name") == self.model_name or item.get("model") == self.model_name
+            for item in response.json().get("models") or []
+        )
+
+    def unload(self, wait_seconds: float = 60.0) -> None:
+        """Unload the model; this is the only way to free Ollama's per-model prompt cache (up to 8 GB).
+
+        Ollama unloads asynchronously, so wait until the model is gone; otherwise a reload request
+        is answered by the still-loaded model and the next question pays the load instead.
+        """
+        url = self._ollama_chat_url().rsplit("/", 1)[0] + "/generate"
+        response = requests.post(url, json={"model": self.model_name, "keep_alive": 0}, timeout=self.timeout)
+        response.raise_for_status()
+        deadline = time.time() + wait_seconds
+        while self._is_loaded():
+            if time.time() > deadline:
+                raise RuntimeError(f"{self.model_name} still loaded {wait_seconds:.0f}s after unload request")
+            time.sleep(0.2)
+
+    def reset_prompt_cache(self) -> dict[str, Any]:
+        """Unload and reload the model so the next answer starts with an empty prompt cache."""
+        started = time.time()
+        self.unload()
+        warm = self.warm_up()
+        return {"seconds": time.time() - started, "load_duration": warm.get("load_duration")}
+
     @staticmethod
     def _ollama_chat_url() -> str:
         host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434").strip()

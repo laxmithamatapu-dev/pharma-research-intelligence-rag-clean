@@ -28,6 +28,9 @@ class Service:
         self.busy = False
 
     def health(self):
+        from app import mem_available_gb
+
+        resets = getattr(self.pipeline, "memory_resets", [])
         return {
             "status": "ok",
             "retrieval_mode": self.pipeline.mode,
@@ -35,6 +38,13 @@ class Service:
             "busy": self.busy,
             "answered": self.answered,
             "started_at": self.started_at,
+            "memory": {
+                "available_gb": mem_available_gb(),
+                "answers_since_cache_reset": getattr(self.pipeline, "generations_since_reset", None),
+                "reset_every": getattr(self.pipeline, "reload_every", None),
+                "cache_resets": len(resets),
+                "last_cache_reset": resets[-1] if resets else None,
+            },
         }
 
     def ask(self, question):
@@ -46,7 +56,24 @@ class Service:
                     print(f"\n===== {datetime.now().isoformat(timespec='seconds')} {question}")
                     result = self.pipeline.answer(question)
                 self.answered += 1
-                return result
+            finally:
+                self.busy = False
+        threading.Thread(target=self.maintain_memory, daemon=True).start()
+        return result
+
+    def maintain_memory(self):
+        """Runs after the response is sent; holds the lock so the next question waits for a reload in progress."""
+        maintain = getattr(self.pipeline, "maintain_memory", None)
+        if maintain is None:
+            return
+        with self.lock:
+            self.busy = True
+            try:
+                with self.log_path.open("a", encoding="utf-8") as log, contextlib.redirect_stdout(log):
+                    record = maintain()
+                if record:
+                    print(f"[serve] prompt cache reset ({record.get('reason')}) in {record.get('seconds', 0):.1f}s",
+                          file=sys.stderr, flush=True)
             finally:
                 self.busy = False
 

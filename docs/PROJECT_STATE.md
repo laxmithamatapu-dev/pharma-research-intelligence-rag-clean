@@ -2,7 +2,7 @@
 
 Checkpoint: **2026-10-15** · Branch `fix/correctness-2day` (not merged; head at checkpoint `20b1e6b`) · Owner role: technical owner.
 Companion documents: [LLM_EVALUATION.md](LLM_EVALUATION.md) (next phase), [NEXT_STEPS.md](NEXT_STEPS.md) (ranked work and plan), [PIPELINE_REPORT.md](PIPELINE_REPORT.md) (final measurements), [OPERATIONS.md](OPERATIONS.md) (run/deploy), [IMPLEMENTATION_LOG.md](IMPLEMENTATION_LOG.md) (session-by-session record), [PROJECT_HANDBOOK.md](PROJECT_HANDBOOK.md) (discovery log).
-Status of workstreams: **Retrieval & architecture — complete** (reopen only on new evidence). **Generation fidelity & model evaluation — next.**
+Status of workstreams: **Retrieval & architecture — complete** (reopen only on new evidence). **Model evaluation — complete (2026-10-16): Qwen 2.5 7B Q4_K_M stays** (6 models, Q8_0, prompt/context variants tested; see [LLM_EVALUATION.md](LLM_EVALUATION.md)). Deployment view: [ENTERPRISE_DEPLOYMENT_ASSESSMENT.md](ENTERPRISE_DEPLOYMENT_ASSESSMENT.md). **Prompt-cache memory bounded (implemented and measured 2026-10-16, [OPERATIONS.md §7](OPERATIONS.md)).** **Open:** apply Ollama network hardening (`OLLAMA_NO_CLOUD=1` + egress rule, [OPERATIONS.md §8](OPERATIONS.md)); enable service auto-start.
 
 ---
 
@@ -88,7 +88,7 @@ Records   JSON per request (including failures) with timings, paper scores, toke
 - "Report numbers exactly" prompt rule: +1/42 facts (noise); removed correct arithmetic.
 
 **Implemented** (all on branch `fix/correctness-2day`)
-Benchmark harness on the production path (L0/L1/L2, seeds, replay, scoring, labeling tools); deterministic classification; paper index; paper-first two-stage retrieval with scope + adaptive budget and abstention floor; Ollama API generation (8 K context, temperature 0, seed, 8 threads, keep-alive, warm-up); paper-identity evidence headers; answer repair; failure records and telemetry; HTTP service and systemd unit; pinned dependencies; 56 automated tests; operations guide.
+Benchmark harness on the production path (L0/L1/L2, seeds, replay, scoring, labeling tools); deterministic classification; paper index; paper-first two-stage retrieval with scope + adaptive budget and abstention floor; Ollama API generation (8 K context, temperature 0, seed, 8 threads, keep-alive, warm-up); paper-identity evidence headers; answer repair; failure records and telemetry; HTTP service and systemd unit; web page; Ollama prompt-cache memory bound (model reload between requests, start-up reset, `/health` memory status); pinned dependencies; 66 automated tests; operations guide; model-comparison and service soak tools.
 
 **Open**
 - Generation fidelity: ≈ 15–20 % of visible facts not stated; claim-level citations weak (§8).
@@ -96,6 +96,8 @@ Benchmark harness on the production path (L0/L1/L2, seeds, replay, scoring, labe
 - Abstention floor calibrated on 12 controls only.
 - Single-labeler draft gold; 49 questions.
 - Service installed as a systemd unit (web page at `/`); auto-start on boot must be enabled (`systemctl enable pharma-rag`).
+- Ollama keeps a background connection to ollama.com and forwards `*-cloud` model requests there; fix documented, not yet applied (needs sudo).
+- Service has no authentication; questions and answers are stored in plain text (`debug_runs/`, `logs/`).
 
 ## 6. Infrastructure
 

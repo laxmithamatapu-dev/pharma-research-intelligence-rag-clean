@@ -1,6 +1,6 @@
 # LLM EVALUATION — Generation Fidelity & Model Selection
 
-Status: **plan approved for execution; no alternative model tested yet** (updated 2026-10-16).
+Status: **complete** (2026-10-16). Result: **no tested model, quantization or prompt variant beats Qwen 2.5 7B Q4_K_M under the decision criteria; it remains the production model** (§12–§16). Deployment view: [ENTERPRISE_DEPLOYMENT_ASSESSMENT.md](ENTERPRISE_DEPLOYMENT_ASSESSMENT.md).
 Question this workstream answers: *Is Qwen 2.5 7B now the primary remaining bottleneck, and can another local model improve answer quality more than further retrieval work?*
 Retrieval is treated as stable and complete (see [PROJECT_STATE.md](PROJECT_STATE.md)); it is reopened only if this evaluation produces evidence against it.
 
@@ -64,7 +64,7 @@ Rule of thumb: each 100 answer tokens ≈ 15 s; each evidence block ≈ 5 s.
 
 | Resource | Value | Consequence for model evaluation |
 |---|---|---|
-| CPU | 8 vCPU (4 cores × 2 threads, Xeon 8573C, AVX-512, AMX), no GPU | Writing speed is set by memory bandwidth (≈ 30 GB/s effective): tok/s ≈ 32 ÷ model GB |
+| CPU | 8 vCPU (4 cores × 2 threads, Xeon 8573C, AVX-512, AMX), no GPU | Writing speed falls with model size (measured 6.9 tok/s at 4 B to 3.3 tok/s at 14 B, §14); at Q4 it is partly compute-bound, not purely bandwidth-bound |
 | RAM | 16 GB total, **no swap** | Exceeding RAM kills a process (OOM); model runner must stay ≤ ≈ 11 GB with the service stopped |
 | RAM in use (service + Qwen 7B resident) | ≈ 7.5 GB (service 1.7 GB, Qwen runner ≈ 5.5 GB) | Stop the service and unload Qwen before testing 12–14 B models |
 | Disk | 29 GB, **14 GB free** (after cleanup) | One model up to 9.3 GB at a time with ≥ 4 GB reserve; never two 12–14 B models together |
@@ -120,8 +120,14 @@ Rule of thumb: each 100 answer tokens ≈ 15 s; each evidence block ≈ 5 s.
 
 **Same evidence for every model.** Retrieval already ran once: every record in `benchmark_runs/20261015_105008_full_final_baseline/records/*.json` stores the exact context (`context`) and query analysis (`query_understanding`) given to Qwen. This is the frozen evidence snapshot; no retrieval runs during the comparison.
 
-**Tooling needed (evaluation only, no production change):** `src/evaluation/model_comparison.py`
-- Loads the 49 stored contexts; generates with `--model <tag>` through the production generator class (same prompt, same post-processing, `think: false` for Qwen 3).
+**Tooling (built 2026-10-16, evaluation only, no production change):** `src/evaluation/model_comparison.py`
+```bash
+HF_HUB_OFFLINE=1 .venv/bin/python src/evaluation/model_comparison.py --model qwen3:8b --set screening   # or --set full | stability | --ids L1-02,C7
+```
+Output: `benchmark_runs/<ts>_model_<tag>[_label]/` with `records/`, `scores.json`, `summary.md`. Other loaded Ollama models are unloaded first (use `--keep-others-loaded` to skip); `think` is off automatically for `qwen3*`. Do not use the service while a comparison runs (timings would mix).
+Verified 2026-10-16: replaying 3 stored contexts with `qwen2.5:7b` gives identical prompt tokens (3,360 / 3,120 / 3,149), identical facts stated and identical abstention to the stored baseline; runner used 8.0 cores, 5.8 GB.
+The 9 controls that abstain at retrieval have no context and are model-independent; the snapshot replays the 40 answers that reached the LLM (including controls L1-C2, C7, C10).
+- Loads the 40 stored contexts; generates with `--model <tag>` through the production generator class (same prompt, same post-processing, `think: false` for Qwen 3).
 - Records per answer: raw output, final answer, Ollama stats (prompt tokens, completion tokens, prefill/decode durations, load time), runner RSS and CPU time sampled from `/proc` during generation.
 - Scores with the existing `scoring.py` (facts visible/raw/final, same-line grounding, abstention, absent-entity claims) plus `unsupported_numbers()` from `numeric_fidelity_experiment.py`.
 - Writes `benchmark_runs/<ts>_model_<tag>/` with records, scores, summary.
@@ -145,7 +151,7 @@ Rule of thumb: each 100 answer tokens ≈ 15 s; each evidence block ≈ 5 s.
 | Set | Questions | Purpose |
 |---|---|---|
 | Screening (20) | L1 with omitted facts: L1-01, L1-02, L1-03, L1-04, L1-09, L1-10, L1-11, L1-12, L1-16, N3 · L1 fully stated (regression guard): L1-05, L1-13, N2, N6 · L2: L2-02, L2-06, M4 · controls reaching the LLM: L1-C2, C7, C10 | Fast elimination (≈ 40 min per 7–9 B model, ≈ 70 min per 12–14 B model) |
-| Full (49) | All benchmark questions (9 retrieval-abstained controls replayed to confirm no-claim behaviour on irrelevant evidence) | Decision run for finalists |
+| Full (40) | All 40 benchmark answers that reached the LLM (9 retrieval-abstained controls are model-independent) | Decision run |
 | Stability (5) | L1-02, L1-10, L1-16, L2-02, C7, second run | Detects run-to-run noise (observed ± 1 fact) |
 
 ## 9. Decision criteria
@@ -193,22 +199,126 @@ Screening gate (to reach the full set): fact retention ≥ baseline + 5 pts on t
 
 Each step records its row in §12 before the next starts; a model that fails screening is removed (`ollama rm`).
 
-## 12. Results register
+## 12. Results register (measured 2026-10-16)
 
-| Model | Size / quant | Runner RAM | CPU (avg cores) | Gen. latency median / p90 | Prompt tok | Completion tok | Fact recall | Fact retention | Numerical acc. | Citation quality | Hallucinations | Out-of-corpus | Assessment |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **qwen2.5:7b** (final baseline, 4 thr) | 7.6 B / Q4_K_M, 4.68 GB | ≈ 5.5 GB | ≈ 4 (4 thr) | ≈ 110 s / — | 3,298 | 361 | 71 % | 81 % (dev 80, held-out 85) | No unsupported values found; 6 flagged = valid derivations (13 answers) | 56 % same-line to gold paper | Invented attributions (repaired) | 0 / 12 claims | Baseline — rerun at 8 threads in step 1 |
-| qwen2.5:7b (snapshot, 8 thr) | | | | | | | | | | | | | step 1 |
-| qwen3:8b | | | | | | | | | | | | | step 2 |
-| llama3.1:8b | | | | | | | | | | | | | step 3 |
-| granite3.3:8b | | | | | | | | | | | | | step 4 |
-| gemma3:12b | | | | | | | | | | | | | step 5 |
-| phi4:14b | | | | | | | | | | | | | step 5 |
-| qwen3:4b-instruct-2507 | | | | | | | | | | | | | step 6 |
+All runs: same stored evidence (`benchmark_runs/20261015_105008_full_final_baseline`), same prompt and post-processing, `num_ctx 8192`, temperature 0, seed 0, 8 threads, one model loaded. Run folders: `benchmark_runs/20261016_*_model_*`.
 
-Per-model notes (tag digest, date, failures with examples, decision) are added below this table as each model is tested.
+### 12.1 Full set (40 answers that reach the LLM; 24 L1 questions, 59 visible facts)
 
-## 13. Risks
+| Model | Facts stated (auto) | Facts stated (adjudicated¹) | Fact retention (adjudicated) | Gen. median / p90 | Answer tokens (median) | Validation failures |
+|---|---|---|---|---|---|---|
+| **qwen2.5:7b Q4_K_M** | 50 / 59 | **50 / 59** | **85 %** (dev 80 %, held-out 100 %) | **96 s / 114 s** | 370 | 0 |
+| qwen3:8b Q4_K_M (`think: false`) | 45 / 59 | 48 / 59 | 81 % (dev 76 %, held-out 100 %) | 175 s / 209 s | 566 | 0 |
+
+### 12.2 Screening set (20 answers: 14 L1 with 40 visible facts, 3 L2, 3 controls that reach the LLM)
+
+| Configuration | Disk | Runner RAM² | Facts stated auto / adjudicated¹ | Fact line cites gold paper³ | Numerical errors (manual) | Out-of-corpus (manual) | Gen. median / p90 | Prompt / answer tokens | Prefill / decode tok/s |
+|---|---|---|---|---|---|---|---|---|---|
+| **qwen2.5:7b Q4_K_M (current)** | 4.68 GB | 5.2 GB | 32 / **32** | 72 % | 1 (sign error, L1-04 week 60) | 3/3 correct, concise | **90 / 106 s** | 3,302 / 349 | 77 / 7.3 |
+| qwen2.5:7b Q8_0 | 8.10 GB | 9.2 GB | 25 / 28 | 48 % | 0 | 3/3 correct, concise | 116 / 144 s | 3,302 / 326 | 53 / 6.2 |
+| qwen3:8b Q4_K_M | 5.23 GB | 6.4 GB | 29 / 32 | 100 % | 0 | 3/3 correct (4 automatic flags were false positives) | 160 / 201 s | 3,289 / 476 | 65 / 5.0 |
+| qwen3:4b-instruct-2507 Q4_K_M | 2.50 GB | 4.0 GB | 33 / **34** | 100 % | 2 (wrong difference; kcal = kJ) | 3/3 correct, concise | 128 / 165 s | 3,281 / 616 | 101 / 6.9 |
+| llama3.1:8b Q4_K_M | 4.92 GB | 6.0 GB | 24 / 27 | 75 % | 0 | 3/3 correct | 127 / 147 s | 3,174 / 378 | 67 / 5.4 |
+| gemma3:12b Q4_K_M | 8.16 GB | 9.8 GB | 33 / 33 | 100 % | 0 | 3/3 correct but padded with off-topic findings | 215 / 244 s | 3,225 / 594 | 43 / 4.2 |
+| phi4:14b Q4_K_M | 9.05 GB | 10.5 GB | 30 / 33 | 100 % | 0 (1 unverified derivation) | 3/3 correct but padded with off-topic findings | 224 / 256 s | 3,174 / 442 | 36 / 3.3 |
+| qwen2.5:7b, claim-per-bullet prompt | — | 5.2 GB | 26 / 29 | 100 % | 0 | 3/3 correct | 91 / 105 s | 3,343 / 317 | 75 / 7.2 |
+| qwen2.5:7b, evidence order reversed | — | 5.2 GB | 30 / 30 | 53 % | 0 | 3/3 correct | 91 / 111 s | 3,302 / 352 | 75 / 7.2 |
+| qwen2.5:7b, first 4 blocks only | — | 5.2 GB | 22 / 25 (of 37 visible) | 59 % | 0 | 3/3 correct | 58 / 73 s | 1,916 / 277 | 83 / 7.8 |
+
+¹ Adjudicated: two gold patterns were too narrow — L1-04 accepted only within-group reductions (367/317/200 kcal) although the paper's placebo-adjusted differences (292/240/270 kcal) answer the question equally; L1-05 rejected "no statistically significant". Re-scored for every configuration with the same rules.
+² Peak `llama-server` RSS on the first answer (weights + 8 K KV cache + buffers), before prompt-cache growth (§15.4).
+³ Share of stated facts whose own line cites a block from the gold paper. All CPU runs used 7.9–8.0 cores on average. All configurations: 0 validation failures, 0 invented author attributions in raw output, no `<think>` output.
+
+**Per-model notes**
+- **qwen2.5:7b Q4_K_M** — best balance; concise; occasionally cites per paragraph instead of per line; one arithmetic sign error (described placebo's +69.6 kcal as a reduction).
+- **qwen2.5:7b Q8_0** — no quality gain over Q4_K_M (−4 adjudicated facts, within noise but not positive), +30 % time, +4 GB RAM. Quantization is not the bottleneck.
+- **qwen3:8b** — cites every claim (best citation behaviour together with the 12–14 B models), quoted the paper's own differences correctly, but writes 50 % longer answers and is 80 % slower; slightly lower retention on the full set (48 vs 50).
+- **qwen3:4b-instruct-2507** — highest adjudicated retention (+2 facts, within noise) at the lowest RAM (4.0 GB), but verbose (616 tokens) so not faster; 2 numerical errors in one answer.
+- **llama3.1:8b** — lowest retention (27), weakest citation; not competitive.
+- **gemma3:12b / phi4:14b** — +1 fact each (noise), per-claim citations, correct numbers, but 2.4–2.5× slower (215–224 s median, p90 > 240 s), 10–10.5 GB RAM, and verbose on out-of-corpus questions. Gemma repeats the section instructions in its headings.
+
+### 12.3 Decision against the criteria (§9)
+
+| Candidate | Fact recall ≥ +5 pts | Numbers ≥ baseline | Citations ≥ baseline | No extra hallucination | Abstention equal | RAM OK | Latency ≤ 150 s | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| qwen3:8b | ✗ (−3 pts full set) | ✓ | ✓ | ✓ | ✓ (verbose) | ✓ | ✗ (175 s) | Reject |
+| qwen3:4b-instruct-2507 | ✗ (+5 pts screening only, = noise) | ✗ (2 errors) | ✓ | ✗ | ✓ | ✓ | ✓ (128 s) | Reject for now |
+| llama3.1:8b | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Reject |
+| gemma3:12b | ✗ (+2.5 pts) | ✓ | ✓ | ✓ | ✗ (padded) | ⚠ 9.8 GB | ✗ (215 s) | Reject |
+| phi4:14b | ✗ (+2.5 pts) | ✓ | ✓ | ✓ | ✗ (padded) | ⚠ 10.5 GB | ✗ (224 s) | Reject |
+| qwen2.5:7b Q8_0 | ✗ (−10 pts) | ✓ | ✗ | ✓ | ✓ | ⚠ 9.2 GB | ✓ (116 s) | Reject |
+
+**No candidate meets the replacement criteria. Qwen 2.5 7B Q4_K_M remains the production model.**
+
+## 13. Root-cause analysis of generation quality
+
+| Factor | Experiment | Result | Conclusion |
+|---|---|---|---|
+| Model architecture / size | 6 models, 4–14 B, same evidence | Adjudicated retention 27–34 of 40; all models within ± 2 facts of Qwen 2.5 except Llama (−5) | Fact retention is **not** model-limited in the 4–14 B range on CPU; larger models improve citation style, not fact count |
+| Quantization | Qwen 2.5 7B Q4_K_M vs Q8_0 | 32 vs 28 facts; citations 72 % vs 48 % | Near-lossless precision gives no gain; Q4_K_M is not causing fact loss |
+| Prompt / answer structure | Profile sections vs flat claim-per-bullet | 32 vs 29 facts; citations 72 % → 100 % | Structure moves **citation granularity**, not retention; the flat format loses some facts |
+| Section template fit | Inspection (L1-04, L1-05) | Quantitative single-study questions classified as COMPARISON get Similarities/Differences/Mechanism/Safety sections; numbers land in odd sections or are replaced by "Not established" boilerplate | Template mismatch is a real but question-specific cause |
+| Context size | 8 blocks vs first 4 | Retention 80 % → 68 % of the facts still visible (25/37); 3 facts lost from evidence | Fewer blocks hurt; context size is **not** overloading the model (≈ 3,300 tokens of 8,192) |
+| Evidence position | Ranked vs reversed order | 32 vs 30 facts (noise); citation accuracy 72 % → 53 % | No strong lost-in-the-middle effect; block-1 advantage (88 % vs 73 %) is mainly because block 1 holds the main finding |
+| Answer length | Correlation over baseline; cross-model | Shorter vs longer half: 78 % vs 81 %; verbose models (qwen3, gemma) do not retain more | Length is not the lever |
+| Gold-label scoring | Manual adjudication | 2 of 14 screening questions mis-scored for some models | Part of the measured "loss" is regex scoring, not the model |
+
+**What remains of the ≈ 15 % fact loss:** secondary statistics that the model judges peripheral (e.g. sample sizes, a second p-value, HR beside the main finding) plus template mismatches. No 4–14 B model, quantization or prompt variant tested removes it.
+
+## 14. Latency analysis
+
+Typical answer: 3,302 prompt tokens + 370 answer tokens. Generation time = prompt ÷ prefill rate + answer ÷ decode rate (measured rates, §12.2).
+
+| Configuration | Prefill (s) | Decode (s) | Total at equal tokens | Measured median (own answer length) |
+|---|---|---|---|---|
+| qwen2.5:7b Q4_K_M | 43 | 51 | **94 s** | 96 s |
+| qwen2.5:7b Q8_0 | 62 | 60 | 122 s (+30 %) | 116 s |
+| qwen3:4b-instruct-2507 | 33 | 54 | 86 s (−9 %) | 128 s (answers +66 % longer) |
+| llama3.1:8b | 49 | 68 | 117 s (+25 %) | 127 s |
+| qwen3:8b | 51 | 75 | 126 s (+34 %) | 175 s (answers +53 % longer) |
+| gemma3:12b | 78 | 89 | 167 s (+78 %) | 215 s |
+| phi4:14b | 92 | 111 | 203 s (+116 %) | 224 s |
+
+| Latency component (current model) | Share / size | Evidence |
+|---|---|---|
+| Reading the prompt (prefill) | ≈ 45 % (43 s); compute-bound | 77 tok/s on 4 physical cores |
+| Writing the answer (decode) | ≈ 54 % (51 s) | 7.3 tok/s |
+| Retrieval + rerank | ≈ 5–12 s | measured 5.4 s median; 11.9 s after model reload (cold cache) |
+| Each evidence block | ≈ 350 tokens ≈ 4.5 s | 8 → 4 blocks: 3,302 → 1,916 tokens, 90 → 58 s |
+| Fixed instructions | ≈ 610 tokens ≈ 8 s | prompt minus context |
+| Each 100 answer tokens | ≈ 14 s | 1 ÷ 7.3 tok/s |
+| Model size | 4 B → 14 B: prefill 101 → 36 tok/s, decode 6.9 → 3.3 tok/s | §12.2 |
+| Quantization | Q4 → Q8: prefill −31 %, decode −15 % | Q8 decode is not 1.7× slower: at Q4 decode is partly compute-bound (dequantization), not purely memory-bandwidth-bound |
+| Answer verbosity | Biggest model-to-model difference after size | qwen3 / gemma write 50–70 % more tokens |
+
+## 15. Infrastructure findings
+
+### 15.1 RAM per model (runner, 8 K context, before prompt cache)
+Qwen 3 4B 4.0 GB · Qwen 2.5 7B Q4 5.2 GB · Llama 3.1 8B 6.0 GB · Qwen 3 8B 6.4 GB · Qwen 2.5 7B Q8 9.2 GB · Gemma 3 12B 9.8 GB · Phi-4 14B 10.5 GB. The application (retrieval models, Chroma) adds ≈ 1.7 GB.
+
+### 15.2 CPU
+Every model used ≈ 8 cores for the whole generation; one answer saturates this VM.
+
+### 15.3 Disk
+Model files: 2.5 GB (Qwen 3 4B) to 9.1 GB (Phi-4). Downloads ran at ≈ 80 MB/s (8 GB in ≈ 100 s).
+
+### 15.4 Prompt-cache memory growth (production risk)
+Ollama 0.40.2 starts `llama-server` with a host-RAM prompt cache of up to **8,192 MiB** (log: "cache state: 39 prompts, 7,804 MiB") and offers no setting to change it. Each answered prompt adds its KV state: ≈ 0.19 GB (Qwen 2.5 7B) to ≈ 0.5 GB (Qwen 3 8B / 12–14 B models). With keep-alive forever, the Qwen 2.5 runner grew from 5.2 GB to 12.9 GB over 40 answers. On a 16 GB machine without swap this can exhaust memory (runner 13.4 GB + application 1.7 GB + OS). The evaluation avoided it by reloading the model when available RAM fell below 3.5 GB (Gemma: 12 reloads in 20 answers, Phi-4: 20).
+**Required production fix (not yet implemented):** the service must bound runner memory — unload the model (`keep_alive: 0`) when available RAM drops below a threshold or after N answers (reload ≈ 8 s from page cache), or use a finite `OLLAMA_KEEP_ALIVE`. Re-check when Ollama is upgraded.
+
+## 16. Deployment recommendation
+
+| Item | Recommendation |
+|---|---|
+| Production model | **qwen2.5:7b Q4_K_M** (unchanged) |
+| Quantization | **Q4_K_M** — Q8_0 costs +30 % time and +4 GB RAM with no quality gain |
+| Fallback / small-machine option | qwen3:4b-instruct-2507 Q4_K_M (4.0 GB RAM) — equal retention, but verbose and 2 numerical errors; needs a full-set run and an answer-length limit before use |
+| Larger models | Not justified on CPU: +1 fact (noise) for 2.4× latency and 2× RAM; reconsider only with a GPU |
+| Next quality lever | Answer template fit (single-study quantitative questions should not get comparison sections) and per-claim citation enforcement in post-processing — evaluate on the same snapshot |
+| Required ops fix | Bound Ollama prompt-cache memory (§15.4) |
+| Highest-quality configuration that realistically runs here | **Qwen 2.5 7B Q4_K_M, 8 threads, 8 evidence blocks, 8 K context**: 85 % fact retention, 0 out-of-corpus claims, ≈ 96 s generation (≈ 100 s end-to-end), 5.2 GB runner RAM |
+
+## 17. Risks
 
 | Risk | Effect | Mitigation |
 |---|---|---|
@@ -221,10 +331,3 @@ Per-model notes (tag digest, date, failures with examples, decision) are added b
 | Disk exhaustion | Failed pulls / index damage | Sequential pulls, `ollama rm` after each, keep ≥ 4 GB free |
 | Licence terms | Gemma, Llama have custom licences | Check licence before production adoption |
 
-## 14. Recommendation
-
-**Model evaluation is the highest-value next activity.**
-1. Generation now loses as many facts as retrieval (9 vs 9 of 68) and is responsible for the main grounding defect (44 % of stated facts not cited to the right paper on the same line).
-2. Retrieval's remaining misses have measured diminishing returns; generation has an untested lever.
-3. The comparison is cheap and isolated: evidence is already stored, no production change, ≈ 1.5–2 days mostly unattended, and disk (14 GB free) and RAM allow every viable candidate one at a time.
-4. Expected outcome: a 7–9 B model (`qwen3:8b` first) that matches latency with better retention is the best case; if only 12–14 B models win, the owner decides on the latency trade with numbers; if none wins, the answer-format experiment (step 10) is next and Qwen 2.5 7B remains.

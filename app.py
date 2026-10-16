@@ -87,6 +87,20 @@ def save_debug_run(
     return artifact_path
 
 
+# Expected RAM growth of one more answer (≈ 0.2 GB for Qwen 2.5 7B, up to ≈ 1.2 GB for 12 B models).
+POST_ANSWER_HEADROOM_GB = 1.0
+
+
+def mem_available_gb():
+    try:
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) / 1024 / 1024
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
 class Pipeline:
     """Question in, grounded answer out; shared by the CLI and the HTTP service."""
 
@@ -99,10 +113,54 @@ class Pipeline:
         self.generator = QwenGenerator()
         self.query_understanding = QueryUnderstanding()
         self.strategy_manager = StrategyManager()
+        # Ollama keeps every prompt's KV state in a RAM cache of up to 8 GB per model with no
+        # setting to limit it; reloading the model is the only way to free it (docs/OPERATIONS.md §7).
+        self.reload_every = int(os.environ.get("RAG_MODEL_RELOAD_EVERY", "20"))
+        self.min_available_gb = float(os.environ.get("RAG_MIN_AVAILABLE_GB", "3.0"))
+        self.generations_since_reset = 0
+        self.memory_resets = []
 
     def warm_up(self):
-        """Load the generation model into memory before the first question."""
-        return self.generator.warm_up()
+        """Load the generation model with an empty prompt cache before the first question.
+
+        Ollama keeps a loaded model (and its cache) across service restarts, so start-up unloads it first.
+        """
+        try:
+            result = self.generator.reset_prompt_cache()
+        except Exception:
+            result = self.generator.warm_up()
+        self.generations_since_reset = 0
+        return result
+
+    def memory_reset_reason(self, headroom_gb=0.0):
+        if self.reload_every > 0 and self.generations_since_reset >= self.reload_every:
+            return f"{self.generations_since_reset} answers since last reset"
+        available = mem_available_gb()
+        threshold = self.min_available_gb + headroom_gb
+        if available is not None and self.min_available_gb > 0 and available < threshold:
+            return f"{available:.1f} GB available < {threshold:.1f} GB"
+        return None
+
+    def maintain_memory(self, headroom_gb=POST_ANSWER_HEADROOM_GB):
+        """Free the model's prompt cache when due; returns a record of the reset or None.
+
+        Called after an answer is delivered with extra headroom, so the reset normally happens
+        between requests instead of delaying the next one.
+        """
+        reason = self.memory_reset_reason(headroom_gb)
+        if reason is None:
+            return None
+        record = {"at": datetime.now().isoformat(timespec="seconds"), "reason": reason,
+                  "available_gb_before": mem_available_gb()}
+        try:
+            record.update(self.generator.reset_prompt_cache())
+        except Exception as exc:
+            record["error"] = f"{type(exc).__name__}: {exc}"
+        record["available_gb_after"] = mem_available_gb()
+        self.generations_since_reset = 0
+        self.memory_resets = (self.memory_resets + [record])[-20:]
+        print(f"[memory] prompt cache reset: {record}", flush=True)
+        return record
 
     def answer(self, question: str) -> dict:
         total_start = time.perf_counter()
@@ -150,6 +208,10 @@ class Pipeline:
             if abstained:
                 answer = ABSTENTION_ANSWER
             else:
+                available = mem_available_gb()
+                if available is not None and self.min_available_gb > 0 and available < self.min_available_gb:
+                    telemetry["memory_reset"] = self.maintain_memory(headroom_gb=0.0)
+                self.generations_since_reset += 1
                 answer = self.generator.generate(
                     question=question,
                     context=context,
@@ -264,6 +326,8 @@ def main():
 
         if result.get("artifact"):
             print(f"\nDebug artifact: {result['artifact']}")
+
+        pipeline.maintain_memory()
 
 
 if __name__ == "__main__":

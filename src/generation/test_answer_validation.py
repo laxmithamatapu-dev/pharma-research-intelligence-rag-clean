@@ -250,6 +250,31 @@ class IndexPathTests(unittest.TestCase):
         self.assertGreater(int(count), 0)
 
 
+class UnloadTests(unittest.TestCase):
+
+    def test_unload_waits_until_model_is_gone(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            generator = QwenGenerator()
+        post = mock.Mock(return_value=mock.Mock(raise_for_status=mock.Mock()))
+        states = iter([True, True, False])
+        with mock.patch("generation.generator.requests.post", post), \
+                mock.patch.object(QwenGenerator, "_is_loaded", side_effect=lambda: next(states)) as loaded, \
+                mock.patch("generation.generator.time.sleep"):
+            generator.unload()
+        self.assertEqual(post.call_args.kwargs["json"]["keep_alive"], 0)
+        self.assertEqual(loaded.call_count, 3)
+
+    def test_unload_times_out_if_model_stays_loaded(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            generator = QwenGenerator()
+        post = mock.Mock(return_value=mock.Mock(raise_for_status=mock.Mock()))
+        with mock.patch("generation.generator.requests.post", post), \
+                mock.patch.object(QwenGenerator, "_is_loaded", return_value=True), \
+                mock.patch("generation.generator.time.sleep"):
+            with self.assertRaises(RuntimeError):
+                generator.unload(wait_seconds=0)
+
+
 class KeepAliveTests(unittest.TestCase):
 
     def test_numeric_keep_alive_is_sent_as_integer(self):
