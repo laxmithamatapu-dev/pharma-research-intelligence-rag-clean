@@ -21,7 +21,7 @@ Checkpoint 2026-10-15. Retrieval & architecture: complete. Next phase: **generat
 | 2 | Claim-level citations are weak | Users cannot verify individual claims | 65 % / 27 % same-line citation to gold paper |
 | 3 | Small, single-labeler evaluation set (49 questions) | Conclusions may not generalize | Held-out L1 81 % vs dev 88 % |
 | 4 | Abstention floor from 12 controls; margin 0.5 between highest control (4.37) and lowest answerable (4.84) | Some out-of-scope questions reach the LLM; some edge questions could abstain wrongly | Calibration data |
-| 5 | Disk 78 % used, 6.4 GB free | Blocks model evaluation of 12–14 B models and corpus growth | `df` |
+| 5 | ~~Disk 78 % used~~ resolved: 14 GB free (2026-10-15) | — | `df` |
 | 6 | One request at a time (≈ 30–40/hour) | Queueing under concurrent use | Single Ollama slot |
 | 7 | Service has no authentication (binds to localhost) | Exposure if bound publicly | `serve.py` |
 
@@ -54,7 +54,7 @@ Checkpoint 2026-10-15. Retrieval & architecture: complete. Next phase: **generat
 
 | Step | Work | Output | Gate |
 |---|---|---|---|
-| 0 | **Prerequisites**: merge or tag the branch; free disk (remove unused MedCPT cross-encoder, old benchmark runs, `qwen2.5:1.5b` only if fallback is replaced); add 10 more controls (≥ 22) | Clean baseline, ≥ 9 GB free | Disk ≥ 9 GB free |
+| 0 | **Prerequisites** (disk done: 14 GB free; branch merged): merge or tag the branch; free disk (remove unused MedCPT cross-encoder, old benchmark runs, `qwen2.5:1.5b` only if fallback is replaced); add 10 more controls (≥ 22) | Clean baseline, ≥ 9 GB free | Disk ≥ 9 GB free |
 | 1 | **Evidence snapshot**: one retrieval pass for all questions; store context + query info; add `--model` / `--snapshot` options to the evaluation runner (no production change) | `benchmark_runs/<ts>_snapshot/` | Snapshot reproduces current fact visibility |
 | 2 | **Baseline on snapshot**: qwen2.5:7b, 8 threads | Row 1 of LLM_EVALUATION.md | Matches final baseline within noise |
 | 3 | **Screening (≈ 20 questions)**: qwen3:8b, llama3.1:8b, gemma3:12b, phi4:14b (one at a time; remove after recording) | Rows in comparison table | Fidelity ≥ baseline + 5 pts and 0 control claims to advance |

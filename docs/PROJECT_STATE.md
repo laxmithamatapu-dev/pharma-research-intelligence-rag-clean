@@ -95,14 +95,14 @@ Benchmark harness on the production path (L0/L1/L2, seeds, replay, scoring, labe
 - Two held-out L1 misses (truncation N1; within-paper rank N4) — accepted, reopen only with new evidence.
 - Abstention floor calibrated on 12 controls only.
 - Single-labeler draft gold; 49 questions.
-- Service not yet installed as a system unit; disk 78 % used.
+- Service installed as a systemd unit (web page at `/`); auto-start on boot must be enabled (`systemctl enable pharma-rag`).
 
 ## 6. Infrastructure
 
 | Item | Value |
 |---|---|
 | VM | Azure, 8 vCPU (Xeon Platinum 8573C, 4 cores × 2 threads, AVX-512, AMX), 16 GB RAM, no GPU |
-| Disk | 29 GB, 78 % used, **6.4 GB free** |
+| Disk | 29 GB, 51 % used, **14 GB free** (after 2026-10-15 cleanup: unused CUDA packages, Ollama GPU libraries, caches) |
 | LLM runtime | Ollama 0.40.2 (llama.cpp); models `qwen2.5:7b` (4.7 GB), `qwen2.5:1.5b` (1.0 GB) |
 | Python | 3.x venv 5.9 GB; torch 2.14.1+cpu; chromadb 1.5.9; transformers 5.19.0; sentence-transformers 6.1.0 |
 
