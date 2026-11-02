@@ -110,3 +110,27 @@ class PassageSelectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TrialIdentifierTests(unittest.TestCase):
+
+    def test_identifier_matches_exact_trial_only(self):
+        from retrieval.paper_retriever import identifier_patterns, trial_identifiers
+
+        identifiers = trial_identifiers("How many participants were randomized in total in KEYNOTE-522?")
+        self.assertEqual(identifiers, ["KEYNOTE-522"])
+        pattern, = identifier_patterns(identifiers)
+        self.assertTrue(pattern.search("subgroup analysis of the KEYNOTE-522 randomized clinical trial"))
+        self.assertTrue(pattern.search("in KEYNOTE‐522 (NCT03036488)"))
+        self.assertTrue(pattern.search("keynote 522"))
+        self.assertFalse(pattern.search("Subgroup Analysis From KEYNOTE-671"))
+        self.assertFalse(pattern.search("KEYNOTE-5222"))
+
+    def test_camel_case_and_registry_identifiers(self):
+        from retrieval.paper_retriever import identifier_patterns, trial_identifiers
+
+        self.assertEqual(trial_identifiers("In the final analysis of CheckMate 9ER, what was the ORR?"), ["CheckMate 9ER"])
+        self.assertEqual(trial_identifiers("Results of NCT03036488?"), ["NCT03036488"])
+        self.assertEqual(trial_identifiers("What is the efficacy of imatinib in asthma?"), [])
+        pattern, = identifier_patterns(["CheckMate 9ER"])
+        self.assertTrue(pattern.search("CheckMate-9ER final analysis"))

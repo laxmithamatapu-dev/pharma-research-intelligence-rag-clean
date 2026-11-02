@@ -16,6 +16,7 @@ from query_understanding.query_understanding import (
 )
 
 from retrieval.retrieval_strategy import (
+    PLAN_SHAPES,
     StrategyManager,
     plan_for
 )
@@ -192,6 +193,8 @@ class Pipeline:
                 chunks = evidence.chunks
                 abstained = evidence.abstained
                 telemetry["retrieval"] = evidence.telemetry
+                if tuple(evidence.allocation) == PLAN_SHAPES["depth"]:
+                    query_info["evidence_focus"] = "single_paper"
             else:
                 chunks = retrieve_chunks(
                     question=question,

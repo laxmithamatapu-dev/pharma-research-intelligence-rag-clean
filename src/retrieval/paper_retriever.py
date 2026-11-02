@@ -1,3 +1,4 @@
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -9,6 +10,15 @@ from vector_store.chroma_store import collection, get_papers_collection
 
 PAPER_DISTANCE = "ip"
 
+# Trial names and registry numbers (the forms that also mark a single-study question): KEYNOTE-522,
+# CheckMate 9ER, NCT03036488. The cross-encoder scores near-identical studies with different
+# identifiers almost equally (KEYNOTE-522 4.13 vs KEYNOTE-671 4.19), so an exact match decides.
+TRIAL_IDENTIFIER = re.compile(r"\b(?:NCT\d{8}|[A-Z]{4,}-\d+[A-Z]?|[A-Z][a-z]+[A-Z][a-z]+ \d+[A-Z]*)\b")
+IDENTIFIER_BONUS = 3.0
+SEPARATORS = r"[\s\-‐‑‒–—]*"
+
+_paper_documents = None
+
 
 @dataclass
 class RankedPaper:
@@ -18,6 +28,38 @@ class RankedPaper:
     metadata: dict
     score: float
     sources: list = field(default_factory=list)
+    rerank_score: float | None = None
+    identifier_match: bool = False
+
+
+    @property
+    def floor_score(self) -> float:
+        return self.score if self.rerank_score is None else self.rerank_score
+
+
+def trial_identifiers(question: str) -> list:
+    return list(dict.fromkeys(match.group(0) for match in TRIAL_IDENTIFIER.finditer(question or "")))
+
+
+def identifier_patterns(identifiers):
+    """Match each identifier regardless of case and of the separators between its letter and digit parts."""
+    return [
+        re.compile(
+            r"(?<![A-Za-z0-9])" + SEPARATORS.join(map(re.escape, re.findall(r"[A-Za-z]+|\d+", identifier)))
+            + r"(?![A-Za-z0-9])",
+            re.IGNORECASE,
+        )
+        for identifier in identifiers
+    ]
+
+
+def paper_documents() -> dict:
+    """Title + abstract of every paper, loaded once (568 papers ≈ 1 MB)."""
+    global _paper_documents
+    if _paper_documents is None:
+        records = get_papers_collection(PAPER_DISTANCE).get(include=["documents"])
+        _paper_documents = dict(zip(records["ids"], records["documents"]))
+    return _paper_documents
 
 
 def candidate_papers(question: str, paper_candidates: int, passage_candidates: int):
@@ -48,6 +90,12 @@ def candidate_papers(question: str, paper_candidates: int, passage_candidates: i
         pmcid = metadata.get("pmcid")
         if pmcid and "passage_hits" not in sources.setdefault(pmcid, []):
             sources[pmcid].append("passage_hits")
+
+    patterns = identifier_patterns(trial_identifiers(question))
+    if patterns:
+        for pmcid, document in paper_documents().items():
+            if any(pattern.search(document) for pattern in patterns):
+                sources.setdefault(pmcid, []).append("identifier")
     return sources, timings, question_vector
 
 
@@ -62,19 +110,26 @@ def rank_papers(question: str, sources: dict):
     }
     known = [pmcid for pmcid in pmcids if pmcid in by_id]
     scores = reranker.predict([(question, by_id[pmcid][0]) for pmcid in known]) if known else []
-    ranked = [
-        RankedPaper(
+    patterns = identifier_patterns(trial_identifiers(question))
+    ranked = []
+    for pmcid, score in zip(known, scores):
+        matched = any(pattern.search(by_id[pmcid][0]) for pattern in patterns)
+        ranked.append(RankedPaper(
             pmcid=pmcid,
             title=by_id[pmcid][1].get("title", ""),
             document=by_id[pmcid][0],
             metadata=by_id[pmcid][1],
-            score=float(score),
+            score=float(score) + (IDENTIFIER_BONUS if matched else 0.0),
             sources=sources[pmcid],
-        )
-        for pmcid, score in zip(known, scores)
-    ]
+            rerank_score=float(score),
+            identifier_match=matched,
+        ))
     ranked.sort(key=lambda paper: paper.score, reverse=True)
-    return ranked, {"paper_rerank_seconds": time.perf_counter() - started, "paper_candidates": len(known)}
+    return ranked, {
+        "paper_rerank_seconds": time.perf_counter() - started,
+        "paper_candidates": len(known),
+        "identifier_matches": [paper.pmcid for paper in ranked if paper.identifier_match],
+    }
 
 
 def paper_margin(ranked):

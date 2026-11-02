@@ -39,7 +39,8 @@ def retrieve_evidence(question, query_info=None, plan=None):
     telemetry.update(paper_telemetry)
     telemetry["top_paper_scores"] = [round(paper.score, 4) for paper in ranked[:8]]
 
-    if plan.paper_floor is not None and (not ranked or ranked[0].score < plan.paper_floor):
+    # The floor uses the cross-encoder score alone so the identifier bonus never changes abstention.
+    if plan.paper_floor is not None and (not ranked or max(paper.floor_score for paper in ranked) < plan.paper_floor):
         telemetry.update({
             "abstained": True,
             "paper_floor": plan.paper_floor,

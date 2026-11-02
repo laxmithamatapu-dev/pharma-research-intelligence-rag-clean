@@ -24,7 +24,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_abstention_skips_generation(self):
         pipeline = self.make_pipeline()
-        evidence = mock.Mock(chunks=[], abstained=True, telemetry={"abstained": True})
+        evidence = mock.Mock(chunks=[], abstained=True, allocation=(), telemetry={"abstained": True})
         with mock.patch.object(app, "retrieve_evidence", return_value=evidence), \
                 mock.patch.object(pipeline.generator, "generate") as generate, \
                 mock.patch.object(app, "save_debug_run", return_value="artifact.json"), \
@@ -92,7 +92,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_generation_counts_toward_reset(self):
         pipeline = self.make_pipeline()
-        evidence = mock.Mock(chunks=[], abstained=False, telemetry={})
+        evidence = mock.Mock(chunks=[], abstained=False, allocation=(1,) * 8, telemetry={})
         with mock.patch.object(app, "retrieve_evidence", return_value=evidence), \
                 mock.patch.object(app, "build_context", return_value=("", {})), \
                 mock.patch.object(app, "mem_available_gb", return_value=12.0), \

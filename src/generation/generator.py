@@ -216,6 +216,11 @@ class QwenGenerator:
         else:
             prompt_profile = ""
 
+        # Comparison sections (similarities, mechanism, indications) describe several studies; when
+        # the evidence comes from one study ("A versus placebo in trial X") they come back empty.
+        if prompt_profile == "COMPARISON" and query_info.get("evidence_focus") == "single_paper":
+            prompt_profile = ""
+
         print(f"DEBUG GENERATOR prompt_profile chosen: {prompt_profile!r}")
 
         # Keep a general answer structure for question types without a

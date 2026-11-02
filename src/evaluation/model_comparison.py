@@ -34,6 +34,28 @@ CLAIMS_STRUCTURE = (
     "intervals, p-values, sample sizes) as written, and ends with the citation of the evidence block that reports it.\n"
     "## Limitations: State important gaps, conflicts, or limitations in the supplied evidence.\n"
 )
+NATURAL_STRUCTURE = (
+    "REQUIRED ANSWER STRUCTURE\n"
+    "Write the answer the way a knowledgeable research assistant would:\n"
+    "## Answer: Answer the question directly in two to four sentences, including the key results with their numbers.\n"
+    "Then add sections with short ## headings you choose to fit this question (for example Efficacy, Safety, "
+    "Mechanism, Study Design). Under them, report every relevant finding in the evidence with all reported numbers "
+    "(values with units, comparison groups, confidence intervals, p-values, sample sizes) as written. Use bullets "
+    "for lists of findings.\n"
+    "Include only sections that the evidence supports; never write a section only to say that something is not "
+    "established.\n"
+    "## Limitations: End with one or two sentences on important limitations of the evidence, when there are any.\n"
+)
+NATURAL_ABSTENTION = re.compile(r"If a requested section is not established by the supplied evidence, state:\n\"Not established in the supplied evidence.\"")
+NATURAL_ABSTENTION_RULE = ('If the supplied evidence does not answer the question, state only:\n'
+                           '"Not established in the supplied evidence."')
+SUMMARY_HEADER = (
+    "REQUIRED ANSWER STRUCTURE\n"
+    "## Summary: First answer the question directly in one or two sentences, stating the main result with its numbers.\n"
+    "Then use these headings in this order. Leave out a heading only when no supplied evidence relates to it:\n"
+)
+SUMMARY_ABSTENTION_RULE = ('If no supplied evidence answers the question, the entire answer is:\n'
+                           '"Not established in the supplied evidence."')
 CONCISE_RULE = "- Be complete but concise. Use one claim per bullet or sentence."
 CLAIMS_RULE = "- One finding per bullet; do not merge findings from different evidence blocks into one bullet."
 
@@ -59,6 +81,12 @@ def apply_prompt_variant(generator, variant):
 
     def build_prompt(question, context, query_info=None):
         prompt = original(question, context, query_info)
+        if variant == "summary":
+            prompt = prompt.replace("REQUIRED ANSWER STRUCTURE\nUse these headings in this order and address each one:\n", SUMMARY_HEADER, 1)
+            return NATURAL_ABSTENTION.sub(lambda _: SUMMARY_ABSTENTION_RULE, prompt, count=1)
+        if variant == "natural":
+            prompt = STRUCTURE_SECTION.sub(lambda _: NATURAL_STRUCTURE, prompt, count=1)
+            return NATURAL_ABSTENTION.sub(lambda _: NATURAL_ABSTENTION_RULE, prompt, count=1)
         prompt = STRUCTURE_SECTION.sub(lambda _: CLAIMS_STRUCTURE, prompt, count=1)
         return prompt.replace(CONCISE_RULE, CLAIMS_RULE, 1)
 
@@ -141,6 +169,15 @@ def unload_other_models(model):
         name = item.get("name") or item.get("model")
         if name and name != model:
             requests.post(f"{ollama_base()}/api/generate", json={"model": name, "keep_alive": 0}, timeout=120)
+
+
+def restore_service_model(model, generator):
+    """Load the service's model again and keep it loaded indefinitely, as the service does (OLLAMA_KEEP_ALIVE=-1).
+
+    Requests made here use this process's keep-alive (30 min by default), which replaces the service's setting:
+    without this, the service's next question pays a cold model load (≈ 2.5 min measured on this VM)."""
+    options = {key: generator.options[key] for key in ("num_ctx", "num_thread") if key in generator.options}
+    requests.post(f"{ollama_base()}/api/generate", json={"model": model, "keep_alive": -1, "options": options}, timeout=600)
 
 
 def mem_available_gb():
@@ -391,10 +428,14 @@ def main(argv=None):
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--keep-others-loaded", action="store_true", help="Do not unload other Ollama models first")
     parser.add_argument("--label", default="")
-    parser.add_argument("--prompt-variant", choices=["default", "claims"], default="default",
-                        help="claims = flat one-finding-per-bullet structure instead of profile sections")
+    parser.add_argument("--prompt-variant", choices=["default", "claims", "natural", "summary"], default="default",
+                        help="claims = flat one-finding-per-bullet structure; natural = direct answer then question-fitted sections; summary = direct answer then the profile sections")
     parser.add_argument("--max-blocks", type=int, help="Keep only the first N evidence blocks")
     parser.add_argument("--block-order", choices=["ranked", "reversed"], default="ranked")
+    parser.add_argument("--evidence-focus", choices=["single_paper"],
+                        help="Set query_info evidence_focus as the pipeline does for depth (one-paper) evidence")
+    parser.add_argument("--service-model", default="qwen2.5:7b",
+                        help="Model the service uses; loaded again with keep-alive forever after the run ('' to skip)")
     parser.add_argument("--min-free-gb", type=float, default=3.5,
                         help="Reload the model (clearing Ollama's prompt cache) when available RAM falls below this")
     args = parser.parse_args(argv)
@@ -417,6 +458,13 @@ def main(argv=None):
         unload_other_models(args.model)
     generator, captured, validations = make_generator(args.model, think)
     apply_prompt_variant(generator, args.prompt_variant)
+    if args.evidence_focus:
+        original_generate = generator.generate
+
+        def generate(question, context, query_info=None):
+            return original_generate(question, context, dict(query_info or {}, evidence_focus=args.evidence_focus))
+
+        generator.generate = generate
     started_load = time.perf_counter()
     with contextlib.redirect_stdout(io.StringIO()):
         generator.warm_up()
@@ -469,6 +517,11 @@ def main(argv=None):
     (run_dir / "scores.json").write_text(json.dumps({"meta": meta, "summary": summary, "runs": rows}, indent=2, default=str))
     (run_dir / "summary.md").write_text(summary_markdown(meta, summary, rows))
     print(json.dumps(summary, indent=2, default=str))
+    if args.service_model:
+        if args.model != args.service_model:
+            requests.post(f"{ollama_base()}/api/generate", json={"model": args.model, "keep_alive": 0}, timeout=120)
+        restore_service_model(args.service_model, generator)
+        print(f"[compare] {args.service_model} loaded again and kept loaded for the service", flush=True)
 
 
 if __name__ == "__main__":

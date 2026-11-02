@@ -331,3 +331,35 @@ Ollama 0.40.2 starts `llama-server` with a host-RAM prompt cache of up to **8,19
 | Disk exhaustion | Failed pulls / index damage | Sequential pulls, `ollama rm` after each, keep ≥ 4 GB free |
 | Licence terms | Gemma, Llama have custom licences | Check licence before production adoption |
 
+
+## 18. Answer-style experiment (2026-11-02)
+
+Goal: answers that read like a general assistant (direct answer first, no empty template sections) without losing facts. Same 20 screening questions, same stored evidence, Qwen 2.5 7B Q4_K_M (`model_comparison.py --set screening --prompt-variant …`).
+
+| Prompt | L1 facts stated / 40 visible | Same-line gold citation (dev) | Controls (claims) | Median generation |
+|---|---|---|---|---|
+| Current profile sections (baseline run `20261016_054029`) | **32** | 68 % (full set) | 0 / 3 | ≈ 90 s |
+| `natural`: direct answer + self-chosen sections (`20261102_094648`) | 26 | 52 % | 0 / 3 | 80 s |
+| `summary`: one-sentence summary + current profile sections (`20261102_101345`) | 21 | 37 % | 0 / 3 | 90 s |
+
+Findings: both variants lose facts. The short direct answer leads the model to summarise and drop secondary statistics (N2 lost HR 1.15 and its CI in both), and in L1-04 both variants reported a different measure from the same paper (lunch-intake kcal) instead of the main result (−367/−317/−200 kcal, 29.9 %). `natural` also appended a stray abstention line to a valid answer.
+
+Decision: keep the current prompt. Presentation is improved only in the web page, which hides sections whose content is "Not established in the supplied evidence." and the trailing References list (the evidence list shows them); a full abstention is still shown. The stored and API answer is unchanged.
+
+## 19. Trial-identifier matching and template fit (2026-11-02)
+
+Problem (live questions on PMC13597290, KEYNOTE-522 Asia subgroup): the cross-encoder scored KEYNOTE-522 and the near-identical KEYNOTE-671 Japanese subgroup paper almost equally (4.13 vs 4.19), so "How many participants were randomized in total in KEYNOTE-522…" went deep into the wrong paper (6 of 8 passages) and the answer said the total was not reported. Single-study questions phrased with "versus" received the comparison template (five empty sections).
+
+Changes:
+- `paper_retriever.py`: trial names / registry numbers in the question (the same patterns that mark a single-study question: `KEYNOTE-522`, `CheckMate 9ER`, `NCT03036488`) are matched exactly (case- and separator-insensitive) against each paper's title + abstract. Matching papers are added to the candidates and receive +3.0 on the ranking score. The abstention floor still uses the cross-encoder score alone.
+- `app.py` / `generator.py`: when retrieval selects the depth plan (one dominant paper), the comparison profile is replaced by the general profile (Executive Summary / Key Findings / Evidence Limitations).
+
+Measurements:
+| Check | Before | After |
+|---|---|---|
+| Retrieval-only benchmark, 49 questions (`20261102_133903` → `20261102_135303`) | L1 facts visible 52/68; L2 gold papers 41; 9 abstentions | identical on every question |
+| Retrieval time, median | 5.38 s | 5.40 s |
+| KEYNOTE-522 "randomized in total" | wrong paper first; 2 passages from the right paper | right paper first (7.13 vs 4.19); 6 passages; 1174 and 2:1 visible |
+| Template replay L1-14, L1-15 (stored evidence) | facts 1/1, 2/2 | facts 1/1, 2/2; both pass validation first time; generation 67→100 s and 104→94 s |
+
+Remaining limit: within-paper passage choice. For "What was the pembrolizumab dosing schedule in KEYNOTE-522?" and the median follow-up question the right paper is selected but the passage with the answer is not among its 6 chosen passages.
