@@ -436,10 +436,10 @@ pres.addSection({ title: "Readiness and next steps" });
 {
   const s = content("What it takes to scale", "Readiness and next steps",
     "Only the current VM row is measured; laptop and server rows are estimates to confirm on real hardware. Storage is cheap; the AI's speed and the number of simultaneous users are what require bigger hardware. At larger corpus sizes, retrieval quality must be re-tested. Details in appendix A3 and A4.");
-  table(s, ["Hardware", "Answer time", "Users", "Documents", "Basis"], [
+  table(s, ["Hardware", "Answer time", "Users", "Capacity (documents)", "Basis"], [
     ["16 GB laptop (Qwen 3 4B)", "1.5–3 min", "1", "15–30k", "est."],
     ["32 GB laptop", "1.5–2 min", "1–2", "≈ 150k", "est."],
-    [{ text: "Current VM, 16 GB", options: { bold: true } }, { text: "≈ 100 s", options: { bold: true } }, { text: "5–10", options: { bold: true } }, { text: "+15k on current disk", options: { bold: true } }, OK("measured")],
+    [{ text: "Current VM, 16 GB", options: { bold: true } }, { text: "≈ 100 s", options: { bold: true } }, { text: "5–10", options: { bold: true } }, { text: "+12k more (disk-bound)", options: { bold: true } }, OK("measured")],
     ["Department server, 1 GPU", "10–20 s", "100–150", "1M+", "est."],
   ], { colW: [3.6, 2.2, 1.6, 3.0, 1.7], fontSize: 14 });
   const W = 3.9, G = 0.2;
